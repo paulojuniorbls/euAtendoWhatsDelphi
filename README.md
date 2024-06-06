@@ -1,7 +1,8 @@
 ```markdown
 # euAtendo - Componente Delphi para Comunicação com WhatsApp
 
-O `euAtendo` é um componente Delphi desenvolvido para facilitar a integração com o WhatsApp, proporcionando funcionalidades como criação de instâncias, envio de mensagens, anexos, menu/lista, entre outras.
+O `euAtendo` é um componente Delphi desenvolvido para facilitar a integração com o WhatsApp, proporcionando funcionalidades
+                                          como criação de instâncias, envio de mensagens, anexos, menu/lista, entre outras.
 
 ## Funcionalidades
 
