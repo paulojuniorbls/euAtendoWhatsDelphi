@@ -137,9 +137,9 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 ---
 
-**Autor:** Sua Empresa
+**Autor:** ApiDevs
 
-**Contato:** seu-email@empresa.com
+**Contato:** paulojuniorbls@gmail.com
 
 ```
 
