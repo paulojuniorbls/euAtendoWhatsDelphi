@@ -146,4 +146,5 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 ```
 
-Este README fornece uma visão geral do componente, instruções de instalação, um exemplo de uso e uma descrição das funções disponíveis. Sinta-se à vontade para personalizar este documento conforme necessário para melhor atender às necessidades do seu projeto.
+Este README fornece uma visão geral do componente, instruções de instalação, um exemplo de uso
+e uma descrição das funções disponíveis.
