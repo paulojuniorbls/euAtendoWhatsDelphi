@@ -142,6 +142,7 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 **Autor:** ApiDevs
 
 **Contato:** paulojuniorbls@gmail.com
+**Contato:** https://wa.me/559982385000
 
 ```
 
