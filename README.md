@@ -45,6 +45,7 @@ Aqui está um exemplo básico de como usar o componente `euAtendo` em um projeto
 ```delphi
 unit MainForm;
 
+
 interface
 
 uses
@@ -128,6 +129,12 @@ procedure ObterGrupos;
 ```delphi
 procedure ObterQrCode();
 ```
+
+### EAlguns prints de tela
+![Alt text](https://s3.apidevs.app/apidevs/Screenshot_1.png)
+![Alt text](https://s3.apidevs.app/apidevs/Screenshot_2.png)
+![Alt text](https://s3.apidevs.app/apidevs/Screenshot_3.png)
+![Alt text](https://s3.apidevs.app/apidevs/Screenshot_4.png)
 
 ## Contribuição
 
