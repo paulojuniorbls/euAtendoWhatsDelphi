@@ -152,7 +152,7 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 **Contato:** https://wa.me/559982385000
 
 **ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior
-**endPoint** https://dtdemo.apidevs.app
+**endPoint** https://evo.euatendo.app
 
 ```
 
