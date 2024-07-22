@@ -25,18 +25,18 @@ anexos, menu/lista, entre outras.
 Para instalar o componente `euAtendo`, siga os passos abaixo:
 
 1. **Baixe e copie os arquivos**:
-   - Baixe os arquivos compilados `.bpl`, `.dcu` e `.dcp` do repositório.
+   - Baixe os arquivos do repositório.
    - Copie esses arquivos para um diretório de sua preferência.
 
 2. **Instale o pacote no Delphi**:
    - Abra o Delphi.
-   - Vá para `Component > Install Packages...`.
-   - Clique em `Add...`.
-   - Navegue até o diretório onde você copiou o arquivo `.bpl` e selecione-o.
+   - Vá para a pasta
+   - build
+   - install
 
 3. **Adicione o caminho das units ao Delphi**:
    - Vá para `Tools > Options...`.
-   - Em `Environment Options > Delphi Options > Library`, adicione o caminho onde os arquivos `.dcu` estão localizados à lista `Library Path`.
+   - Em `Environment Options > Delphi Options > Library`, adicione o caminho onde os arquivos estão localizados.
 
 ## Uso
 
