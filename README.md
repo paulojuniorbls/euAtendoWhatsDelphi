@@ -17,7 +17,11 @@ anexos, menu/lista, entre outras.
 - Envio de menu/lista
 - Confirmação de entrega de mensagem
 - Confirmação de leitura
+- Obter nome do contato
+- Listar todas as instancias
+- Verificar se o numero possui WhatsApp
 - Obter todos os grupos
+- Listar todos os participantes de um grupo
 - Obter todas as instâncias
 - Deletar instância
 - Reiniciar instância
