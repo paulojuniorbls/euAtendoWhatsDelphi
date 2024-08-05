@@ -10,7 +10,8 @@
 unit ApiEuAtendo;
 interface
 uses
-  IdMultipartFormData,System.Classes, IdHTTP, IdSSL, System.JSON, FMX.Graphics, System.SysUtils, System.NetEncoding, FMX.Objects, IdSSLOpenSSL, IdCoderMIME
+  IdMultipartFormData,System.Classes, IdHTTP, IdSSL, System.JSON, FMX.Graphics, System.SysUtils,
+  System.NetEncoding, FMX.Objects, IdSSLOpenSSL, IdCoderMIME
   //baixar imagem disco
   ,System.Net.HttpClientComponent,System.Net.HttpClient
 
@@ -33,6 +34,7 @@ type
     Status: string;
     ApiKey: string;
   end;
+
 
   type
   TQrCodeResponse = record
@@ -145,6 +147,7 @@ type
     procedure obterInstancias;
     function FileToBase64(const FileName: string): string;
     function EnviarMensagemDeMidia(NumeroTelefone, Mensagem, MediaCaption, caminho_arquivo: string): string;
+    function ObterDadosContato(const ContactID: string; out ErroMsg: string): TContato;
     procedure ObterFotoPerfil(Numero: string; SalvarNoDisco: Boolean);
     function CriarInstancia(out ErrorMsg: string): Boolean;
     function StatusInstancia( ): TInstanceStatus;
@@ -1023,6 +1026,77 @@ begin
 end;
 
 
+
+function TApiEuAtendo.ObterDadosContato(const ContactID: string; out ErroMsg: string): TContato;
+var
+  IdHTTP: TIdHTTP;
+  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
+  JSONToSend, JSONObject: TJSONObject;
+  JSONArray: TJSONArray;
+  StringStream: TStringStream;
+  ResponseStr: string;
+  URL: string;
+  Contato: TContato;
+  numero:String;
+begin
+  // Inicializar valores padrão
+  Contato.fone := '';
+  Contato.Nome := '';
+  ErroMsg := '';
+  IdHTTP := TIdHTTP.Create(nil);
+  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  JSONToSend := TJSONObject.Create;
+  JSONArray := nil;
+  try
+    IdHTTP.IOHandler := SSLHandler;
+    SSLHandler.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+    IdHTTP.Request.ContentType := 'application/json';
+    IdHTTP.Request.CustomHeaders.Values['User-Agent'] := 'insomnia/2023.5.8';
+    IdHTTP.Request.CustomHeaders.Values['apikey'] := '10zk38o8wme8cpins9xkyat';
+    numero := FormatPhoneNumber(ContactID);
+    // Construindo o JSON de envio
+    JSONToSend.AddPair('where', TJSONObject.Create.AddPair('id', numero + '@s.whatsapp.net'));
+    // Convertendo JSON para string
+    StringStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+    // URL de requisição
+    URL := 'https://evo.voceatende.com.br/chat/findContacts/testePJ';
+    try
+      try
+        // Enviando a requisição POST e obtendo a resposta
+        ResponseStr := IdHTTP.Post(URL, StringStream);
+        // Convertendo a resposta para JSON
+        JSONArray := TJSONObject.ParseJSONValue(ResponseStr) as TJSONArray;
+        if Assigned(JSONArray) and (JSONArray.Count > 0) then
+        begin
+          // Pegando o primeiro objeto do array
+          JSONObject := JSONArray.Items[0] as TJSONObject;
+          // Extraindo os valores
+          Contato.fone := JSONObject.GetValue<string>('id');
+          Contato.Nome := JSONObject.GetValue<string>('pushName');
+        end;
+      except
+        on E: EIdHTTPProtocolException do
+        begin
+          ResponseStr := E.ErrorMessage;
+          ErroMsg := 'Erro ao obter dados do contato: ' + ResponseStr;
+        end;
+        on E: Exception do
+        begin
+          ErroMsg := 'Erro ao obter dados do contato: ' + E.Message;
+        end;
+      end;
+    finally
+      StringStream.Free;
+    end;
+  finally
+    JSONToSend.Free;
+    if Assigned(JSONArray) then
+      JSONArray.Free;
+    SSLHandler.Free;
+    IdHTTP.Free;
+  end;
+  Result := Contato;
+end;
 
 function TApiEuAtendo.ExistWhats(NumeroTelefone: string; out ErroMsg: string): Boolean;
 var
