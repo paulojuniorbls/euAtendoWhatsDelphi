@@ -1,6 +1,19 @@
 ```markdown
 # euAtendo - Componente Delphi para Comunicação com WhatsApp
 
+**Autor:** ApiDevs
+
+**Contato:** paulojuniorbls@gmail.com
+**Contato:** https://wa.me/559982385000
+
+********  Servidor para testes do componente *************
+
+**ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior
+**endPoint** https://evo.voceatende.com.br
+
+```
+
+
 ## nosso grupo no whatsApp -> https://chat.whatsapp.com/DxuXCabArWdLZZBhx5wb1r
 
 O `euAtendo` é um componente Delphi desenvolvido para facilitar
@@ -152,15 +165,6 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 ---
 
-**Autor:** ApiDevs
-
-**Contato:** paulojuniorbls@gmail.com
-**Contato:** https://wa.me/559982385000
-
-**ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior
-**endPoint** https://evo.voceatende.com.br
-
-```
 
 Este README fornece uma visão geral do componente, instruções de instalação, um exemplo de uso
 e uma descrição das funções disponíveis.
