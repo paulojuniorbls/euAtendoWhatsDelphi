@@ -10,6 +10,7 @@
 
 **ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior
 **endPoint** https://evo.voceatende.com.br
+**Manager** https://evo.voceatende.com.br/manager
 
 ```
 
