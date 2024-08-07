@@ -60,6 +60,15 @@ Para instalar o componente `euAtendo`, siga os passos abaixo:
 
 ## Uso
 
+1. Começe sempre criando a sua instancia.
+2. Confirme se a instancia está criada (Salve os dados de nome da instancia  e senha).
+3. Leia o qrCode.
+4. Confirme que está conectado (pode usar o manager).
+5. envie um texto ou arquivo.
+
+*Sempre confirme que voce tem uma instancia conectada antes de usar os recursos do componente*
+
+
 Aqui está um exemplo básico de como usar o componente `euAtendo` em um projeto Delphi:
 
 ```delphi
