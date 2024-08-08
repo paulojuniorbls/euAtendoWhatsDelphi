@@ -27,7 +27,8 @@ anexos, menu/lista, entre outras.
 - Criação de instância
 - Exibir QR Code para conectar
 - Envio de texto
-- Envio de anexos
+- Envio de anexos por arquivos
+- Envio de anexos por base64
 - Envio de menu/lista
 - Confirmação de entrega de mensagem
 - Confirmação de leitura
