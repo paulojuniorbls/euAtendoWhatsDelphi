@@ -147,6 +147,8 @@ type
     procedure obterInstancias;
     function FileToBase64(const FileName: string): string;
     function EnviarMensagemDeMidia(NumeroTelefone, Mensagem, MediaCaption, caminho_arquivo: string): string;
+    function EnviarMensagemDeBase64(NumeroTelefone, MediaCaption, base64,tipoArquivo,nomeArquivo:String): string;
+
     function ObterDadosContato(const ContactID: string; out ErroMsg: string): TContato;
     procedure ObterFotoPerfil(Numero: string; SalvarNoDisco: Boolean);
     function CriarInstancia(out ErrorMsg: string): Boolean;
@@ -633,9 +635,6 @@ begin
   ).Start;
 end;
 
-
-
-
 procedure TApiEuAtendo.DoObterFotoPerfil(const FotoPerfilResponse: TFotoPerfilResponse);
 begin
     if Assigned(FOnObterFotoPerfil) then
@@ -685,7 +684,7 @@ begin
   fileExt := LowerCase(ExtractFileExt(filePath));
 
   // Verifica a extensão e associa a um tipo
-  if (fileExt = '.pdf') or (fileExt = '.doc') or (fileExt = '.docx') or (fileExt = '.txt') then
+  if (fileExt = '.pdf') or (fileExt = '.doc') or (fileExt = '.docx') or (fileExt = '.txt') or (fileExt = '.xls') or (fileExt = '.xlsx') then
     Result := 'document'
   else if (fileExt = '.jpg') or (fileExt = '.jpeg') or (fileExt = '.png') or (fileExt = '.webp') or (fileExt = '.gif') then
     Result := 'image'
@@ -694,7 +693,7 @@ begin
   else if (fileExt = '.zip') or (fileExt = '.rar') then
     Result := 'document'
   else
-    Result := 'unknown'; // Tipo desconhecido
+    Result := 'document'; // na duvida vamos enviar como documento
 end;
 
 function CleanInvalidBase64Chars(const Base64Str: string): string;
@@ -708,6 +707,67 @@ begin
     if Base64Str[I] in ['A'..'Z', 'a'..'z', '0'..'9', '+', '/', '='] then
       Result := Result + Base64Str[I];
   end;
+end;
+
+function TApiEuAtendo.EnviarMensagemDeBase64(NumeroTelefone, MediaCaption, base64,tipoArquivo,nomeArquivo: string): string;
+var
+  HTTP: TIdHTTP;
+  SSL: TIdSSLIOHandlerSocketOpenSSL;
+  JSONToSend: TJSONObject;
+  OptionsJSON, MediaMessageJSON: TJSONObject;
+  PostDataStream: TStringStream;
+  Response: string;
+  Base64Str, FileName: string;
+  ResponseJSON, KeyJSON: TJSONObject;
+begin
+  Result := '';  // Assume failure by default
+  NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+  HTTP := TIdHTTP.Create(nil);
+  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  Base64Str := CleanInvalidBase64Chars(base64);
+  FileName := nomeArquivo;
+  try
+    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+    HTTP.IOHandler := SSL;
+    HTTP.Request.ContentType := 'application/json';
+    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+    JSONToSend := TJSONObject.Create;
+    try
+      JSONToSend.AddPair('number', NumeroTelefone);
+      OptionsJSON := TJSONObject.Create;
+      OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
+      OptionsJSON.AddPair('presence', 'composing');
+      JSONToSend.AddPair('options', OptionsJSON);
+      MediaMessageJSON := TJSONObject.Create;
+      MediaMessageJSON.AddPair('mediatype', TipoArquivo);
+      MediaMessageJSON.AddPair('fileName', FileName);
+      MediaMessageJSON.AddPair('caption', MediaCaption);
+      MediaMessageJSON.AddPair('media', Base64Str);
+      JSONToSend.AddPair('mediaMessage', MediaMessageJSON);
+      PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+      try
+        Response := HTTP.Post(FEvolutionApiURL + '/message/sendMedia/' + FNomeInstancia, PostDataStream);
+        // Analisar a resposta JSON e extrair o ID da mensagem
+        ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+        try
+          if ResponseJSON.TryGetValue('key', KeyJSON) then
+          begin
+            Result := KeyJSON.GetValue<string>('id');
+          end;
+        finally
+          ResponseJSON.Free;
+        end;
+      finally
+        PostDataStream.Free;
+      end;
+    finally
+      JSONToSend.Free;
+    end;
+  finally
+    SSL.Free;
+    HTTP.Free;
+  end;
+
 end;
 
 function TApiEuAtendo.EnviarMensagemDeMidia(NumeroTelefone, Mensagem, MediaCaption, caminho_arquivo: string): string;
@@ -842,8 +902,6 @@ begin
   end;
 end;
 
-
-
 function TApiEuAtendo.EnviarMensagemDeTexto(NumeroTelefone, Mensagem: string): string;
 var
   HTTP: TIdHTTP;
@@ -859,7 +917,7 @@ begin
   SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
   NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
   try
-    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+     SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
     HTTP.IOHandler := SSL;
     HTTP.Request.ContentType := 'application/json';
     HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
@@ -870,7 +928,7 @@ begin
       TextMessageJSON.AddPair('text', Mensagem);
       JSONToSend.AddPair('textMessage', TextMessageJSON);
       OptionsJSON := TJSONObject.Create;
-      OptionsJSON.AddPair('delay', TJSONNumber.Create(437));
+      OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
       JSONToSend.AddPair('options', OptionsJSON);
       PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
       try
@@ -1052,14 +1110,14 @@ begin
     SSLHandler.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
     IdHTTP.Request.ContentType := 'application/json';
     IdHTTP.Request.CustomHeaders.Values['User-Agent'] := 'insomnia/2023.5.8';
-    IdHTTP.Request.CustomHeaders.Values['apikey'] := '10zk38o8wme8cpins9xkyat';
+    IdHTTP.Request.CustomHeaders.Values['apikey'] := FChaveApi;
     numero := FormatPhoneNumber(ContactID);
     // Construindo o JSON de envio
     JSONToSend.AddPair('where', TJSONObject.Create.AddPair('id', numero + '@s.whatsapp.net'));
     // Convertendo JSON para string
     StringStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
     // URL de requisição
-    URL := 'https://evo.voceatende.com.br/chat/findContacts/testePJ';
+    URL := FEvolutionApiURL + '/chat/findContacts/' + FNomeInstancia;
     try
       try
         // Enviando a requisição POST e obtendo a resposta
