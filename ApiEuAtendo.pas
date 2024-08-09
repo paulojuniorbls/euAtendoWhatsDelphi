@@ -148,6 +148,8 @@ type
     function FileToBase64(const FileName: string): string;
     function EnviarMensagemDeMidia(NumeroTelefone, Mensagem, MediaCaption, caminho_arquivo: string): string;
     function EnviarMensagemDeBase64(NumeroTelefone, MediaCaption, base64,tipoArquivo,nomeArquivo:String): string;
+    function SendMessageGhostMentionToGroup(const GroupID, MessageText: string;
+      out ErroMsg: string): Boolean;
 
     function ObterDadosContato(const ContactID: string; out ErroMsg: string): TContato;
     procedure ObterFotoPerfil(Numero: string; SalvarNoDisco: Boolean);
@@ -673,9 +675,6 @@ begin
   FdddPadrao := '99';
 end;
 
-
-
-
 function TApiEuAtendo.DetectFileType(const filePath: string): string;
 var
   fileExt: string;
@@ -686,7 +685,7 @@ begin
   // Verifica a extensão e associa a um tipo
   if (fileExt = '.pdf') or (fileExt = '.doc') or (fileExt = '.docx') or (fileExt = '.txt') or (fileExt = '.xls') or (fileExt = '.xlsx') then
     Result := 'document'
-  else if (fileExt = '.jpg') or (fileExt = '.jpeg') or (fileExt = '.png') or (fileExt = '.webp') or (fileExt = '.gif') then
+  else if (fileExt = '.jpg') or (fileExt = '.jpeg') or (fileExt = '.png') or (fileExt = '.webp') or (fileExt = '.gif') or (fileExt = '.bmp') then
     Result := 'image'
   else if (fileExt = '.mp3') or (fileExt = '.wav') or (fileExt = '.ogg') then
     Result := 'audio'
@@ -1217,6 +1216,68 @@ begin
     HTTP.Free;
   end;
 end;
+
+function TApiEuAtendo.SendMessageGhostMentionToGroup(const GroupID, MessageText: string; out ErroMsg: string): Boolean;
+var
+  HTTP: TIdHTTP;
+  SSL: TIdSSLIOHandlerSocketOpenSSL;
+  JSONToSend, JsonOptions, JsonTextMessage: TJSONObject;
+  PostDataStream: TStringStream;
+  ResponseStr: string;
+begin
+  Result := False;  // Assume failure by default
+  ErroMsg := '';    // Initialize error message
+  HTTP := TIdHTTP.Create(nil);
+  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  JSONToSend := TJSONObject.Create;
+  JsonOptions := TJSONObject.Create;
+  JsonTextMessage := TJSONObject.Create;
+  try
+    // Configurações SSL
+    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+    HTTP.IOHandler := SSL;
+    HTTP.Request.ContentType := 'application/json';
+    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+
+    // Criação do JSON para envio
+    JsonOptions.AddPair('delay', TJSONNumber.Create(1200));
+    JsonOptions.AddPair('presence', 'composing');
+    JsonOptions.AddPair('mentions', TJSONObject.Create.AddPair('everyOne', TJSONBool.Create(True)));
+
+    JsonTextMessage.AddPair('text', MessageText);
+
+    JSONToSend.AddPair('number', GroupID);
+    JSONToSend.AddPair('options', JsonOptions);
+    JSONToSend.AddPair('textMessage', JsonTextMessage);
+
+    PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+    try
+     // try
+        // Enviando a requisição POST
+        ResponseStr := HTTP.Post(FEvolutionApiURL + '/message/sendText/' + FNomeInstancia, PostDataStream);
+        Result := True;  // Sucesso
+//      except
+//        on E: EIdHTTPProtocolException do
+//        begin
+//          ResponseStr := E.ErrorMessage;
+//          ErroMsg := 'Erro ao enviar mensagem: ' + ResponseStr;
+//        end;
+//        on E: Exception do
+//        begin
+//          ErroMsg := 'Erro ao enviar mensagem: ' + E.Message;
+//        end;
+//      end;
+    finally
+//      PostDataStream.Free;
+    end;
+  finally
+    JsonTextMessage.Free;
+    JsonOptions.Free;
+    SSL.Free;
+    HTTP.Free;
+  end;
+end;
+
 
 function TApiEuAtendo.DeletarInstancia(nomeInstancia: string): Boolean;
 var
