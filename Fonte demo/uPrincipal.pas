@@ -6,10 +6,10 @@ uses
    Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, ApiEuAtendo,
   Vcl.ExtCtrls, EncdDecd, JPEG,Vcl.Imaging.pngimage,
-  IdHTTP, IdMultipartFormData, IdSSL, IdSSLOpenSSL,IdCoderMIME
+  IdHTTP, IdMultipartFormData, IdSSL, IdSSLOpenSSL,IdCoderMIME,System.RegularExpressions
 
   //uses para baixar o arquivo direto para o disco
-  ,System.Net.HttpClientComponent,System.Net.HttpClient
+  ,System.Net.HttpClientComponent,System.Net.HttpClient, System.NetEncoding
   //uses para enviar menu e lista
   ,System.JSON
   ;
@@ -23,8 +23,6 @@ type
     Label3: TLabel;
     Label4: TLabel;
     Label5: TLabel;
-    Label6: TLabel;
-    Label7: TLabel;
     Button1: TButton;
     edtNome: TEdit;
     edtSenha: TEdit;
@@ -37,10 +35,7 @@ type
     Button6: TButton;
     Button7: TButton;
     edtNumeroContato: TEdit;
-    edtTextoMensagem: TEdit;
     Button8: TButton;
-    edtApiGlobal: TEdit;
-    edtUrl: TEdit;
     ApiEuAtendo1: TApiEuAtendo;
     FileOpenDialog1: TFileOpenDialog;
     Button9: TButton;
@@ -58,6 +53,16 @@ type
     Button17: TButton;
     edtNomeContato: TEdit;
     Label10: TLabel;
+    Button18: TButton;
+    Panel1: TPanel;
+    Label6: TLabel;
+    Label7: TLabel;
+    edtApiGlobal: TEdit;
+    edtUrl: TEdit;
+    Label11: TLabel;
+    memoMensagemEnviar: TMemo;
+    Button19: TButton;
+    Button20: TButton;
  procedure Button1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure voceAtendeAPIObterQrCode(Sender: TObject;
@@ -97,10 +102,17 @@ type
     procedure Button15Click(Sender: TObject);
     procedure Button16Click(Sender: TObject);
     procedure Button17Click(Sender: TObject);
+    procedure Button18Click(Sender: TObject);
+    procedure edtStatusChange(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure Button19Click(Sender: TObject);
+    procedure Button20Click(Sender: TObject);
   private
     procedure LoadBase64ToImage(const Base64: string; Image: TImage);
     function SaveImageFromURLToDisk(const ImageURL,
       NumeroContato: string): string;
+    function FileToBase64(const FileName: string): string;
+    function CleanInvalidBase64Chars(const Base64Str: string): string;
     { Private declarations }
   public
     { Public declarations }
@@ -238,6 +250,8 @@ end;
 
 procedure TForm9.Button11Click(Sender: TObject);
 begin
+ApiEuAtendo1.DeslogarInstancia;
+
 if ApiEuAtendo1.DeletarInstancia(edtNome.Text) then
    showmessage('Instancia excluida com sucesso');
 end;
@@ -325,6 +339,103 @@ if contato.Nome <> '' then
   edtNomeContato.Text := contato.Nome;
 end;
 
+procedure TForm9.Button18Click(Sender: TObject);
+begin
+
+
+   FileOpenDialog1.Execute;
+
+   if FileOpenDialog1.FileName <> '' then
+     begin
+     memo1.Lines.Clear;
+     memo1.Lines.Add(FileToBase64(FileOpenDialog1.FileName));
+     end;
+
+   ApiEuAtendo1.EnviarMensagemDeBase64(edtNumeroContato.Text,'segue seu boleto',Memo1.Lines.Text,'document','orcamento.pdf');
+   ApiEuAtendo1.EnviarMensagemDeBase64('559982385000','segue seu boleto',Memo1.Lines.Text,'document','orcamento.pdf');
+
+
+//    extensões de pdf,doc,docx,txt é tudo como document
+//    extensões de pdf,doc,docx,txt ,zip,rar tudo como document
+//    extensões de jpg,jpeg,png,webp,gif tudo como image
+//    extensões de mp3.wav.ogg tudo como audio
+
+
+
+
+end;
+
+procedure TForm9.Button19Click(Sender: TObject);
+var
+erro:String;
+begin
+
+  if edtIdGrupo.Text <> '' then
+     ApiEuAtendo1.SendMessageGhostMentionToGroup(edtIdGrupo.Text,memoMensagemEnviar.Lines.text,erro);// SendMessageGhostMentionToGroup
+
+  if erro <> '' then
+    ShowMessage(erro);
+end;
+
+function TForm9.FileToBase64(const FileName: string): string;
+var
+  InputStream: TFileStream;
+  Bytes: TBytes;
+  base64:String;
+begin
+  Result := '';
+  if not FileExists(FileName) then
+    Exit;
+
+  InputStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+  try
+    SetLength(Bytes, InputStream.Size);
+    InputStream.Read(Bytes[0], InputStream.Size);
+    base64 := TNetEncoding.Base64.EncodeBytesToString(Bytes);
+    base64 := CleanInvalidBase64Chars(base64);
+    Result := base64;
+  finally
+    InputStream.Free;
+  end;
+end;
+
+procedure TForm9.FormCreate(Sender: TObject);
+begin
+ApiEuAtendo1.ChaveApi        := edtSenha.Text;
+ApiEuAtendo1.NomeInstancia   := edtNome.Text;
+ApiEuAtendo1.EvolutionApiURL := edtUrl.Text;
+ApiEuAtendo1.GlobalAPI       := edtApiGlobal.text;
+
+
+     Button17.Enabled := false;
+     Button6.Enabled  := false;
+     Button3.Enabled  := false;
+     Button5.Enabled  := false;
+     Button18.Enabled := false;
+     Button9.Enabled  := false;
+     Button10.Enabled := false;
+     Button13.Enabled := false;
+     Button12.Enabled := false;
+     Button7.Enabled  := false;
+     Button14.Enabled := false;
+     Button19.Enabled := false;
+
+end;
+
+function TForm9.CleanInvalidBase64Chars(const Base64Str: string): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 1 to Length(Base64Str) do
+  begin
+    // Adiciona ao resultado apenas se for um caractere válido em Base64
+    if Base64Str[I] in ['A'..'Z', 'a'..'z', '0'..'9', '+', '/', '='] then
+      Result := Result + Base64Str[I];
+  end;
+end;
+
+
 procedure TForm9.Button1Click(Sender: TObject);
 var
   ErrorMsg: string;
@@ -342,6 +453,7 @@ begin
     begin
       ShowMessage('Instância criada com sucesso.');
        ApiEuAtendo1.StatusInstancia;
+       ApiEuAtendo1.ObterQrCode;
     end;
   except
     on E: Exception do
@@ -349,6 +461,13 @@ begin
       ShowMessage('Erro inesperado: ' + ErrorMsg);
     end;
   end;
+end;
+
+procedure TForm9.Button20Click(Sender: TObject);
+var
+erro:String;
+begin
+ApiEuAtendo1.AlterarPropriedadesInstancia(false,false,false,false,false,'esse numero desativou as ligações',erro);
 end;
 
 procedure TForm9.Button2Click(Sender: TObject);
@@ -360,7 +479,8 @@ procedure TForm9.Button3Click(Sender: TObject);
 var
 id:String;
 begin
- edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto(edtNumeroContato.Text,edtTextoMensagem.Text);
+ edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto(edtNumeroContato.Text,memoMensagemEnviar.Lines.text);
+ edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto('559982385000',memoMensagemEnviar.Lines.text);
 end;
 
 procedure TForm9.Button4Click(Sender: TObject);
@@ -372,8 +492,10 @@ procedure TForm9.Button5Click(Sender: TObject);
 begin
    FileOpenDialog1.Execute;
    if FileOpenDialog1.FileName <> '' then
-     edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeMidia(edtNumeroContato.Text,'',edtTextoMensagem.Text,FileOpenDialog1.FileName);
-
+     begin
+     edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeMidia('559982385000','',memoMensagemEnviar.Lines.Text,FileOpenDialog1.FileName);
+     edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeMidia(edtNumeroContato.Text,'',memoMensagemEnviar.Lines.Text,FileOpenDialog1.FileName);
+     end;
 end;
 
 procedure TForm9.Button6Click(Sender: TObject);
@@ -388,6 +510,7 @@ end;
 
 procedure TForm9.Button8Click(Sender: TObject);
 begin
+memo1.Lines.Clear;
 ApiEuAtendo1.obterInstancias;
 end;
 
@@ -464,12 +587,47 @@ end;
 
 procedure TForm9.edtNomeExit(Sender: TObject);
 begin
+edtNome.Text := TRegEx.Replace(edtNome.Text, '[^a-zA-Z0-9]', '');
 ApiEuAtendo1.NomeInstancia := edtNome.Text;
 end;
 
 procedure TForm9.edtSenhaExit(Sender: TObject);
 begin
 ApiEuAtendo1.ChaveApi := edtSenha.Text;
+end;
+
+procedure TForm9.edtStatusChange(Sender: TObject);
+begin
+if edtStatus.Text <> 'open' then
+    begin
+     Button17.Enabled := false;
+     Button6.Enabled  := false;
+     Button3.Enabled  := false;
+     Button5.Enabled  := false;
+     Button18.Enabled := false;
+     Button9.Enabled  := false;
+     Button10.Enabled := false;
+     Button13.Enabled := false;
+     Button12.Enabled := false;
+     Button7.Enabled  := false;
+     Button14.Enabled := false;
+     Button19.Enabled := false;
+    end
+    else
+    begin
+     Button17.Enabled := true;
+     Button6.Enabled  := true;
+     Button3.Enabled  := true;
+     Button5.Enabled  := true;
+     Button18.Enabled := true;
+     Button9.Enabled  := true;
+     Button10.Enabled := true;
+     Button13.Enabled := true;
+     Button12.Enabled := true;
+     Button7.Enabled  := true;
+     Button14.Enabled := true;
+     Button19.Enabled := true;
+    end;
 end;
 
 procedure TForm9.edtUrlExit(Sender: TObject);
