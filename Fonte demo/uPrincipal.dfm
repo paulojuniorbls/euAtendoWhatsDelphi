@@ -3,7 +3,7 @@ object Form9: TForm9
   Top = 0
   Caption = 'Demo do euAtendo - API'
   ClientHeight = 914
-  ClientWidth = 976
+  ClientWidth = 974
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -540,7 +540,7 @@ object Form9: TForm9
     OnClick = Button18Click
   end
   object Panel1: TPanel
-    Left = 696
+    Left = 694
     Top = 8
     Width = 272
     Height = 178
@@ -641,14 +641,14 @@ object Form9: TForm9
     OnStatusInstancia = ApiEuAtendo1StatusInstancia
     OnCriarInstancia = ApiEuAtendo1CriarInstancia
     OnObterQrCode = ApiEuAtendo1ObterQrCode
-    Left = 640
-    Top = 192
+    Left = 608
+    Top = 176
   end
   object FileOpenDialog1: TFileOpenDialog
     FavoriteLinks = <>
     FileTypes = <>
     Options = []
-    Left = 632
-    Top = 128
+    Left = 1024
+    Top = 208
   end
 end
