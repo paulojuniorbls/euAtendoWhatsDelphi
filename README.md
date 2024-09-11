@@ -13,7 +13,7 @@
 **Manager** https://evo.voceatende.com.br/manager
 
 ```
-## Quer pagar um café para nossa equipe?  
+## Quer doar um café para nossa equipe?  
 ![QR Code](https://s3.apidevs.app/euatendo/cafe.png)
 
 ## nosso grupo no whatsApp -> https://chat.whatsapp.com/DxuXCabArWdLZZBhx5wb1r
