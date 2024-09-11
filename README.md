@@ -6,6 +6,16 @@
 **Contato:** paulojuniorbls@gmail.com
 **Contato:** https://wa.me/559982385000
 
+********Nosso canal no youtube********
+https://www.youtube.com/@euAtendo
+
+Apresentação do componente e primeiros passos.
+https://youtu.be/FYHuuJA8fcM
+
+Aula de Typebot Com Horse um bot no WhatsApp  .
+https://youtu.be/4tYj7OAqD98
+
+
 ********  Servidor para testes do componente *************
 
 **ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior
