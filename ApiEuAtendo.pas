@@ -192,6 +192,9 @@ procedure Register;
 
 implementation
 
+uses
+  Functions;
+
 procedure TApiEuAtendo.DoObterContatos(const Contatos: TContatos);
 begin
   if Assigned(FOnObterContatos) then
@@ -1107,7 +1110,9 @@ begin
     JSONToSend.AddPair('instanceName', FNomeInstancia);
     JSONToSend.AddPair('apikey', FChaveApi);
     JSONToSend.AddPair('token', FChaveApi);
-    JSONToSend.AddPair('groups_ignore', false);
+    //{$IFDEF VER340 }
+    JSONToSend.AddPair('groups_ignore', VariantToJSON(false));
+    //{$ENDIF}
 
     if (FUrlTypebot <> '') and (FNomeTypeBot <> '') then
     begin
@@ -1207,12 +1212,16 @@ begin
     HTTP.Request.ContentType := 'application/json';
     HTTP.Request.CustomHeaders.AddValue('apikey', FGlobalAPI);
 
-    JSONToSend.AddPair('reject_call', rejeitarLigacao);
-    JSONToSend.AddPair('groups_ignore', ignorarGrupos);
-    JSONToSend.AddPair('always_online', sempreOnline);
-    JSONToSend.AddPair('read_messages', lerMensagens);
-    JSONToSend.AddPair('read_status', lerStatus);
-    JSONToSend.AddPair('sync_full_history', false);
+    //{$IFDEF VER340 }
+    JSONToSend.AddPair('reject_call', VariantToJSON(rejeitarLigacao));
+    JSONToSend.AddPair('groups_ignore', VariantToJSON(ignorarGrupos));
+    JSONToSend.AddPair('always_online', VariantToJSON(sempreOnline));
+    JSONToSend.AddPair('read_messages', VariantToJSON(lerMensagens));
+    JSONToSend.AddPair('read_status', VariantToJSON(lerStatus));
+    JSONToSend.AddPair('sync_full_history', VariantToJSON(false));
+    //{$ENDIF}
+
+
     JSONToSend.AddPair('msg_call', mensagemRejeitaLigacao);
 
 
