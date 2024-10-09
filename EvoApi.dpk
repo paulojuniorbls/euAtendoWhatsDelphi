@@ -37,6 +37,7 @@ requires
   vcl;
 
 contains
-  ApiEuAtendo in 'ApiEuAtendo.pas';
+  ApiEuAtendo in 'ApiEuAtendo.pas',
+  uFunctions in 'uFunctions.pas';
 
 end.

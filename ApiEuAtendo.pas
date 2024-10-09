@@ -230,7 +230,7 @@ procedure Register;
 implementation
 
 uses
-  Functions;
+  uFunctions;
 
 function TApiEuAtendo.GetVersion: TVersionOption;
 begin
