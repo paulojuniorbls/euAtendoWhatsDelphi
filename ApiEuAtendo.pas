@@ -170,9 +170,7 @@ end;
     procedure DoObterQrCode(const Base64QRCode: string);
     procedure DoObterContatos(const Contatos: TContatos);
   public
-   function CriarInstancia(const InstanceName, Token, UrlTypebot, NomeTypeBot,
-      Integration: string; RejectCall, GroupsIgnore, AlwaysOnline, ReadMessages,
-      ReadStatus, SyncFullHistory: Boolean): Boolean;
+   function CriarInstancia(out ErrorMsg: string): Boolean;
     property Version: TVersionOption read GetVersion write SetVersion;
     function SoNumeros(const ATexto: string): string;
     procedure CarregarImagemDaUrl(const AURL: string; AImage: TImage);
@@ -1482,7 +1480,7 @@ begin
 
 end;
 
-function TApiEuAtendo.CriarInstancia(const InstanceName, Token, UrlTypebot, NomeTypeBot, Integration: string; RejectCall, GroupsIgnore, AlwaysOnline, ReadMessages, ReadStatus, SyncFullHistory: Boolean): Boolean;
+function TApiEuAtendo.CriarInstancia(out ErrorMsg: string): Boolean;
 var
   HTTP: TIdHTTP;
   SSL: TIdSSLIOHandlerSocketOpenSSL;
@@ -1497,7 +1495,7 @@ begin
   // Initialize ResultData with default values
   FillChar(ResultData, SizeOf(ResultData), 0);
 
-  if InstanceName = '' then
+  if FNomeInstancia = '' then
   begin
     Exit(False);
   end;
@@ -1514,16 +1512,16 @@ begin
     HTTP.Request.CustomHeaders.AddValue('apikey', FGlobalAPI);
 
     // Build the JSON to send
-    JSONToSend.AddPair('instanceName', InstanceName);
-    JSONToSend.AddPair('token', Token);
+    JSONToSend.AddPair('instanceName', FNomeInstancia);
+    JSONToSend.AddPair('token', FChaveApi);
+    JSONToSend.AddPair('integration', 'WHATSAPP-BAILEYS');
     JSONToSend.AddPair('qrcode', TJSONBool.Create(True));
-    JSONToSend.AddPair('integration', Integration);
-    JSONToSend.AddPair('reject_call', TJSONBool.Create(RejectCall));
-    JSONToSend.AddPair('groupsIgnore', TJSONBool.Create(GroupsIgnore));
-    JSONToSend.AddPair('alwaysOnline', TJSONBool.Create(AlwaysOnline));
-    JSONToSend.AddPair('readMessages', TJSONBool.Create(ReadMessages));
-    JSONToSend.AddPair('readStatus', TJSONBool.Create(ReadStatus));
-    JSONToSend.AddPair('syncFullHistory', TJSONBool.Create(SyncFullHistory));
+    JSONToSend.AddPair('reject_call', TJSONBool.Create(false));
+    JSONToSend.AddPair('groupsIgnore', TJSONBool.Create(true));
+    JSONToSend.AddPair('alwaysOnline', TJSONBool.Create(false));
+    JSONToSend.AddPair('readMessages', TJSONBool.Create(false));
+    JSONToSend.AddPair('readStatus', TJSONBool.Create(false));
+    JSONToSend.AddPair('syncFullHistory', TJSONBool.Create(false));
 
     if (UrlTypebot <> '') and (NomeTypeBot <> '') then
     begin
