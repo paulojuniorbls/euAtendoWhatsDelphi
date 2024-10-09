@@ -16,15 +16,18 @@ Aula de Typebot Com Horse um bot no WhatsApp  .
 https://youtu.be/4tYj7OAqD98
 
 
-********  Servidor para testes do componente *************
-            ************V1*************
-**ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior
-**endPoint** https://apiv1demo.apidevs.app
-**Manager** https://apiv1demo.apidevs.app/manager
-            ************V2*************
-**ApiGlobal** ASD3F21APIDEVS6A5SPAULOJRDEVFA1
-**endPoint** https://apiv2demo.apidevs.app/
-**Manager** https://apiv2demo.apidevs.app/manager
+********  Servidor para testes do componente **************
+*            ************V1*************                  *
+**ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior *
+**endPoint** https://apiv1demo.apidevs.app                *
+**Manager** https://apiv1demo.apidevs.app/manager         *
+*                                                         *
+*            ************V2*************                  *
+**ApiGlobal** ASD3F21APIDEVS6A5SPAULOJRDEVFA1             *
+**endPoint** https://apiv2demo.apidevs.app/               *
+**Manager** https://apiv2demo.apidevs.app/manager         *
+*                                                         * 
+********  Servidor para testes do componente **************
 
 ```
 ## Quer doar um café para nossa equipe?  
