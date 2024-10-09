@@ -32,7 +32,9 @@ requires
   fmx,
   IndySystem,
   IndyProtocols,
-  IndyCore;
+  IndyCore,
+  vclimg,
+  vcl;
 
 contains
   ApiEuAtendo in 'ApiEuAtendo.pas';

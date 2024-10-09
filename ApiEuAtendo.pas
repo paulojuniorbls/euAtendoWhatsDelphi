@@ -3,8 +3,8 @@
 //Criador e mantido por Paulo Junior (99)8238-5000
 //Componente REST para integrar com a EVOLUTION API uma plataforma 100% rest para interagir com WhatsApp, Facebook e Instagram.
 //Está com dificuldade de criar seu servidor, manda um zap e ajudamos voce, ou criamos e mantemos um em nossa estrutura,
-// Mais barato que uma VPS basica.
-
+//Mais barato que uma VPS basica.
+//
 
 
 unit ApiEuAtendo;
@@ -14,8 +14,12 @@ uses
   System.NetEncoding, IdSSLOpenSSL, IdCoderMIME, VCL.Graphics ,Vcl.ExtCtrls, VCL.Imaging.jpeg
   //baixar imagem disco
   ,System.Net.HttpClientComponent,System.Net.HttpClient
-
+  ,System.Generics.Collections
   ;
+
+  type
+   TVersionOption = (V1, V2); // Enum com as versões disponíveis
+
 type
   TInstanceStatus = record
     InstanceName: string;
@@ -33,6 +37,7 @@ type
     InstanceName: string;
     Status: string;
     ApiKey: string;
+    InstanceId: String;
   end;
 
 
@@ -63,13 +68,31 @@ type
 
   TGrupoMembros = array of TGrupoMembro;
 
+  TInstanceCount = record
+  MessageCount: Integer;
+  ContactCount: Integer;
+  ChatCount: Integer;
+end;
 
+TInstanceSettings = record
+  RejectCall: Boolean;
+  MsgCall: string;
+  GroupsIgnore: Boolean;
+  AlwaysOnline: Boolean;
+  ReadMessages: Boolean;
+  ReadStatus: Boolean;
+  SyncFullHistory: Boolean;
+  CreatedAt: string;
+  UpdatedAt: string;
+end;
 
   type
   TInstanceDetail = record
     InstanceName: string;
     InstanceId: string;
+    Integration: string;
     Owner: string;
+    PhoneNumber: string;
     ProfileName: string;
     ProfilePictureUrl: string;
     ProfileStatus: string;
@@ -77,6 +100,12 @@ type
     ServerUrl: string;
     ApiKey: string;
     WebhookWaBusiness: string;
+    ClientName: string;
+    ConnectionStatus: string;
+    DisconnectionReasonCode: string;
+    DisconnectionObject: string;
+    Settings: TInstanceSettings;       // Configurações da instância (aninhado)
+  Count: TInstanceCount;             // Contador da instância (aninhado)
   end;
   TInstances = array of TInstanceDetail;
 
@@ -104,6 +133,7 @@ type
   TOnObterQrCode = procedure(Sender: TObject; const Base64QRCode: string) of object;
   TApiEuAtendo = class(TComponent)
   private
+    FVersion: TVersionOption;
     FProxyHost: String;
     FProxyPort: String;
     FProxyProtocol: String;
@@ -130,14 +160,20 @@ type
     procedure DoObterFotoPerfil(const FotoPerfilResponse: TFotoPerfilResponse);
     procedure DoObterGrupos(const Grupos: TGrupos);
     function FormatPhoneNumber(const Numero: string): string;
-    function SaveImageFromURLToDisk(const ImageURL,
-      NumeroContato: string): string;
+    function SaveImageFromURLToDisk(const ImageURL,NumeroContato: string): string;
+    function GetVersion: TVersionOption;
+    procedure SetVersion(const Value: TVersionOption);
+    function GetMimeTypeByExtension(const FileName: string): string;
   protected
     procedure DoStatusInstancia(const InstanceStatus: TInstanceStatus);
     procedure DoCriarInstancia(const InstanceResponse: TInstanceResponse);
     procedure DoObterQrCode(const Base64QRCode: string);
     procedure DoObterContatos(const Contatos: TContatos);
   public
+   function CriarInstancia(const InstanceName, Token, UrlTypebot, NomeTypeBot,
+      Integration: string; RejectCall, GroupsIgnore, AlwaysOnline, ReadMessages,
+      ReadStatus, SyncFullHistory: Boolean): Boolean;
+    property Version: TVersionOption read GetVersion write SetVersion;
     function SoNumeros(const ATexto: string): string;
     procedure CarregarImagemDaUrl(const AURL: string; AImage: TImage);
     procedure obterDadosInstancia;
@@ -156,15 +192,16 @@ type
     function AlterarPropriedadesInstancia(rejeitarLigacao,ignorarGrupos,sempreOnline,lerMensagens,lerStatus : Boolean;mensagemRejeitaLigacao:String; out ErrorMsg: string): Boolean;
     function ObterDadosContato(const ContactID: string; out ErroMsg: string): TContato;
     procedure ObterFotoPerfil(Numero: string; SalvarNoDisco: Boolean);
-    function CriarInstancia(out ErrorMsg: string): Boolean;
+
     function StatusInstancia( ): TInstanceStatus;
     procedure ObterQrCode();
     function EnviarMensagemDeTexto(NumeroTelefone, Mensagem: string): string;
-    function StatusDaMensagem(idMensagem: string): string;
+    function StatusDaMensagem(idMensagem,NumeroContato: string): string;
     function EnviarLista(NumeroTelefone, Titulo, Descricao, TextoBotao, TextoRodape: string; Secoes: TJSONArray): Boolean;
     procedure ObterGrupos;
     constructor Create(AOwner: TComponent);
   published
+    property VersionAPI: TVersionOption read GetVersion write SetVersion default V1;
     property ProxyHost: String read FProxyHost write FProxyHost;
     property ProxyPort: String read FProxyPort write FProxyPort;
     property ProxyProtocol: String read FProxyProtocol write FProxyProtocol;
@@ -191,6 +228,28 @@ type
 procedure Register;
 
 implementation
+
+uses
+  Functions;
+
+function TApiEuAtendo.GetVersion: TVersionOption;
+begin
+  Result := FVersion;
+end;
+
+procedure TApiEuAtendo.SetVersion(const Value: TVersionOption);
+begin
+  FVersion := Value;
+//  // Aqui você pode ajustar comportamentos específicos de cada versão
+//  if FVersion = ver1x then
+//  begin
+//    // Comportamentos específicos da versão 1.x
+//  end
+//  else if FVersion = ver2x then
+//  begin
+//    // Comportamentos específicos da versão 2.x
+//  end;
+end;
 
 procedure TApiEuAtendo.DoObterContatos(const Contatos: TContatos);
 begin
@@ -288,12 +347,55 @@ begin
         for I := 0 to JSONArray.Count - 1 do
         begin
           JSONContato := JSONArray.Items[I] as TJSONObject;
-          if JSONContato.TryGetValue('id', Value) then
-            Contatos[I].fone := Value.Value;
+          // Inicializa os campos do contato
+          Contatos[I].fone := '';
+          Contatos[I].Nome := '';
+          Contatos[I].foto := '';
+
+          // Extrai o número de telefone
+          if JSONContato.TryGetValue('remoteJid', Value) then
+          begin
+            if (Value <> nil) and not Value.Null then
+              Contatos[I].fone := Value.Value;
+          end
+          else if JSONContato.TryGetValue('jid', Value) then
+          begin
+            if (Value <> nil) and not Value.Null then
+              Contatos[I].fone := Value.Value;
+          end
+          else if JSONContato.TryGetValue('number', Value) then
+          begin
+            if (Value <> nil) and not Value.Null then
+              Contatos[I].fone := Value.Value;
+          end;
+
+          // Limpa o sufixo do número de telefone, se necessário
+          if Contatos[I].fone.EndsWith('@s.whatsapp.net') then
+            Contatos[I].fone := Contatos[I].fone.Replace('@s.whatsapp.net', '');
+
+          // Extrai o nome
           if JSONContato.TryGetValue('pushName', Value) then
-            Contatos[I].Nome := Value.Value;
-          if JSONContato.TryGetValue('profilePictureUrl', Value) then
-            Contatos[I].foto := Value.Value;
+          begin
+            if (Value <> nil) and not Value.Null then
+              Contatos[I].Nome := Value.Value;
+          end
+          else if JSONContato.TryGetValue('name', Value) then
+          begin
+            if (Value <> nil) and not Value.Null then
+              Contatos[I].Nome := Value.Value;
+          end;
+
+          // Extrai a URL da foto do perfil
+          if JSONContato.TryGetValue('profilePicUrl', Value) then
+          begin
+            if (Value <> nil) and not Value.Null then
+              Contatos[I].foto := Value.Value;
+          end
+          else if JSONContato.TryGetValue('profilePictureUrl', Value) then
+          begin
+            if (Value <> nil) and not Value.Null then
+              Contatos[I].foto := Value.Value;
+          end;
         end;
         DoObterContatos(Contatos);
       finally
@@ -307,6 +409,8 @@ begin
     HTTP.Free;
   end;
 end;
+
+
 
 function TApiEuAtendo.SoNumeros(const ATexto: string): string;
 var
@@ -330,8 +434,9 @@ var
   JSONArray: TJSONArray;
   Instances: TInstances;
   I: Integer;
-  JSONInstance, IntegrationJSON: TJSONObject;
+  JSONItem, JSONInstance, SettingJSON, CountJSON: TJSONObject;
   Value: TJSONValue;
+  OwnerJid: string;
 begin
   HTTP := TIdHTTP.Create(nil);
   SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
@@ -342,42 +447,129 @@ begin
     ResponseStr := HTTP.Get(FEvolutionApiURL + '/instance/fetchInstances');
     JSONArray := TJSONObject.ParseJSONValue(ResponseStr) as TJSONArray;
     SetLength(Instances, JSONArray.Count);
+
     for I := 0 to JSONArray.Count - 1 do
     begin
-      JSONInstance := JSONArray.Items[I].GetValue<TJSONObject>('instance');
+      JSONItem := JSONArray.Items[I] as TJSONObject;
+
+      // Verifique se o item contém o campo 'instance' (Versão 2.0)
+      if JSONItem.TryGetValue('instance', JSONInstance) then
+      begin
+        // Versão 2.0: 'instance' contém os dados da instância
+        // 'JSONInstance' já está atribuído
+      end
+      else
+      begin
+        // Versão 1.0: O item é os dados da instância
+        JSONInstance := JSONItem;
+      end;
+
+      // Inicialize os campos da instância
       Instances[I].InstanceName := '';
       Instances[I].InstanceId := '';
-      Instances[I].Owner := '';
-      Instances[I].ProfileName := '';
-      Instances[I].ProfilePictureUrl := '';
-      Instances[I].ProfileStatus := '';
-      Instances[I].Status := '';
-      Instances[I].ServerUrl := '';
-      Instances[I].ApiKey := '';
-      Instances[I].WebhookWaBusiness := '';
-      if JSONInstance.TryGetValue('instanceName', Value) then
-        Instances[I].InstanceName := Value.Value;
+      Instances[I].ClientName := '';
+      Instances[I].ConnectionStatus := '';
+      Instances[I].DisconnectionReasonCode := '';
+      Instances[I].DisconnectionObject := '';
+
+      // Extraia os campos, lidando com as diferenças entre versões
       if JSONInstance.TryGetValue('instanceId', Value) then
+        Instances[I].InstanceId := Value.Value
+      else if JSONInstance.TryGetValue('id', Value) then
         Instances[I].InstanceId := Value.Value;
-      if JSONInstance.TryGetValue('owner', Value) then
-        Instances[I].Owner := Value.Value;
-      if JSONInstance.TryGetValue('profileName', Value) then
-        Instances[I].ProfileName := Value.Value;
-      if JSONInstance.TryGetValue('profilePictureUrl', Value) then
-        Instances[I].ProfilePictureUrl := Value.Value;
-      if JSONInstance.TryGetValue('profileStatus', Value) then
-        Instances[I].ProfileStatus := Value.Value;
+
+      if JSONInstance.TryGetValue('instanceName', Value) then
+        Instances[I].InstanceName := Value.Value
+      else if JSONInstance.TryGetValue('name', Value) then
+        Instances[I].InstanceName := Value.Value;
+
       if JSONInstance.TryGetValue('status', Value) then
-        Instances[I].Status := Value.Value;
-      if JSONInstance.TryGetValue('serverUrl', Value) then
-        Instances[I].ServerUrl := Value.Value;
+        Instances[I].ConnectionStatus := Value.Value
+      else if JSONInstance.TryGetValue('connectionStatus', Value) then
+        Instances[I].ConnectionStatus := Value.Value;
+
+      if JSONInstance.TryGetValue('clientName', Value) and not (Value is TJSONNull) then
+        Instances[I].ClientName := Value.Value;
+
+       if JSONInstance.TryGetValue('ownerJid', Value) and not (Value is TJSONNull) then
+        begin
+          OwnerJid := Value.Value;
+          // Remover o sufixo '@s.whatsapp.net'
+          Instances[I].PhoneNumber := Copy(OwnerJid, 1, Pos('@', OwnerJid) - 1);
+        end;
+
       if JSONInstance.TryGetValue('apikey', Value) then
+        Instances[I].ApiKey := Value.Value
+      else if JSONInstance.TryGetValue('token', Value) then
         Instances[I].ApiKey := Value.Value;
-      // Tratamento para o campo "integration" -> "webhook_wa_business"
-      if JSONInstance.TryGetValue('integration', IntegrationJSON) then
-        if IntegrationJSON.TryGetValue('webhook_wa_business', Value) then
-          Instances[I].WebhookWaBusiness := Value.Value;
+
+      if JSONInstance.TryGetValue('profileName', Value) and not (Value is TJSONNull) then
+        Instances[I].Owner := Value.Value;
+
+      if JSONInstance.TryGetValue('profilePicUrl', Value) and not (Value is TJSONNull) then
+        Instances[I].ProfilePictureUrl := Value.Value;
+
+      if JSONInstance.TryGetValue('disconnectionReasonCode', Value) and not (Value is TJSONNull) then
+        Instances[I].DisconnectionReasonCode := Value.Value;
+
+      if JSONInstance.TryGetValue('disconnectionObject', Value) and not (Value is TJSONNull) then
+        Instances[I].DisconnectionObject := Value.Value;
+
+      // Processar o campo 'integration' se existir
+      if JSONInstance.TryGetValue('integration', Value) and not (Value is TJSONNull) then
+        Instances[I].Integration := Value.Value;
+
+      // Processar o campo 'settings' ou 'Setting'
+      if JSONInstance.TryGetValue('settings', SettingJSON) or
+         JSONInstance.TryGetValue('Setting', SettingJSON) then
+      begin
+        if SettingJSON.TryGetValue('rejectCall', Value) then
+          Instances[I].Settings.RejectCall := Value.AsType<Boolean>;
+        if SettingJSON.TryGetValue('msgCall', Value) and not (Value is TJSONNull) then
+          Instances[I].Settings.MsgCall := Value.Value;
+        if SettingJSON.TryGetValue('groupsIgnore', Value) then
+          Instances[I].Settings.GroupsIgnore := Value.AsType<Boolean>;
+        if SettingJSON.TryGetValue('alwaysOnline', Value) then
+          Instances[I].Settings.AlwaysOnline := Value.AsType<Boolean>;
+        if SettingJSON.TryGetValue('readMessages', Value) then
+          Instances[I].Settings.ReadMessages := Value.AsType<Boolean>;
+        if SettingJSON.TryGetValue('readStatus', Value) then
+          Instances[I].Settings.ReadStatus := Value.AsType<Boolean>;
+        if SettingJSON.TryGetValue('syncFullHistory', Value) then
+          Instances[I].Settings.SyncFullHistory := Value.AsType<Boolean>;
+        if SettingJSON.TryGetValue('createdAt', Value) and not (Value is TJSONNull) then
+          Instances[I].Settings.CreatedAt := Value.Value;
+        if SettingJSON.TryGetValue('updatedAt', Value) and not (Value is TJSONNull) then
+          Instances[I].Settings.UpdatedAt := Value.Value;
+      end;
+
+      // Processar o campo '_count' se existir
+      if JSONInstance.TryGetValue('_count', CountJSON) then
+      begin
+        if CountJSON.TryGetValue('Message', Value) then
+        begin
+          if Value is TJSONNumber then
+            Instances[I].Count.MessageCount := TJSONNumber(Value).AsInt
+          else
+            Instances[I].Count.MessageCount := StrToIntDef(Value.Value, 0);
+        end;
+        if CountJSON.TryGetValue('Contact', Value) then
+        begin
+          if Value is TJSONNumber then
+            Instances[I].Count.ContactCount := TJSONNumber(Value).AsInt
+          else
+            Instances[I].Count.ContactCount := StrToIntDef(Value.Value, 0);
+        end;
+        if CountJSON.TryGetValue('Chat', Value) then
+        begin
+          if Value is TJSONNumber then
+            Instances[I].Count.ChatCount := TJSONNumber(Value).AsInt
+          else
+            Instances[I].Count.ChatCount := StrToIntDef(Value.Value, 0);
+        end;
+      end;
     end;
+
     if Assigned(FOnObterInstancias) then
       FOnObterInstancias(Self, Instances);
   finally
@@ -385,6 +577,9 @@ begin
     HTTP.Free;
   end;
 end;
+
+
+
 
 procedure TApiEuAtendo.CarregarImagemDaUrl(const AURL: string; AImage: TImage);
 var
@@ -591,6 +786,9 @@ begin
   DDD := FdddPadrao;  // DDD padrão
   CountryCodeLength := Length(FCodigoPais);
   DDDLength := Length(FdddPadrao);
+  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+  begin raise Exception.Create('Resposta JSON inválida');end; end;
+
   // Manter apenas os dígitos numéricos
   for I := 1 to Length(Numero) do
   begin
@@ -791,6 +989,9 @@ function TApiEuAtendo.DetectFileType(const filePath: string): string;
 var
   fileExt: string;
 begin
+  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+  begin raise Exception.Create('Resposta JSON inválida');end; end;
+
   // Extrai a extensão do arquivo a partir do caminho do arquivo
   fileExt := LowerCase(ExtractFileExt(filePath));
 
@@ -814,6 +1015,7 @@ begin
   Result := '';
   for I := 1 to Length(Base64Str) do
   begin
+
     // Adiciona ao resultado apenas se for um caractere válido em Base64
     if Base64Str[I] in ['A'..'Z', 'a'..'z', '0'..'9', '+', '/', '='] then
       Result := Result + Base64Str[I];
@@ -831,54 +1033,157 @@ var
   Base64Str, FileName: string;
   ResponseJSON, KeyJSON: TJSONObject;
 begin
-  Result := '';  // Assume failure by default
-  NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
-  HTTP := TIdHTTP.Create(nil);
-  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  Base64Str := CleanInvalidBase64Chars(base64);
-  FileName := nomeArquivo;
-  try
-    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-    HTTP.IOHandler := SSL;
-    HTTP.Request.ContentType := 'application/json';
-    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
-    JSONToSend := TJSONObject.Create;
-    try
-      JSONToSend.AddPair('number', NumeroTelefone);
-      OptionsJSON := TJSONObject.Create;
-      OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
-      OptionsJSON.AddPair('presence', 'composing');
-      JSONToSend.AddPair('options', OptionsJSON);
-      MediaMessageJSON := TJSONObject.Create;
-      MediaMessageJSON.AddPair('mediatype', TipoArquivo);
-      MediaMessageJSON.AddPair('fileName', FileName);
-      MediaMessageJSON.AddPair('caption', MediaCaption);
-      MediaMessageJSON.AddPair('media', Base64Str);
-      JSONToSend.AddPair('mediaMessage', MediaMessageJSON);
-      PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+
+  if FVersion = TVersionOption.V1 then
+    begin
+     Result := '';  // Assume failure by default
+      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+      HTTP := TIdHTTP.Create(nil);
+      SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      Base64Str := CleanInvalidBase64Chars(base64);
+      FileName := nomeArquivo;
       try
-        Response := HTTP.Post(FEvolutionApiURL + '/message/sendMedia/' + FNomeInstancia, PostDataStream);
-        // Analisar a resposta JSON e extrair o ID da mensagem
-        ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+        SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+        HTTP.IOHandler := SSL;
+        HTTP.Request.ContentType := 'application/json';
+        HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+        JSONToSend := TJSONObject.Create;
         try
-          if ResponseJSON.TryGetValue('key', KeyJSON) then
-          begin
-            Result := KeyJSON.GetValue<string>('id');
+          JSONToSend.AddPair('number', NumeroTelefone);
+          OptionsJSON := TJSONObject.Create;
+          OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
+          OptionsJSON.AddPair('presence', 'composing');
+          JSONToSend.AddPair('options', OptionsJSON);
+          MediaMessageJSON := TJSONObject.Create;
+          MediaMessageJSON.AddPair('mediatype', TipoArquivo);
+          MediaMessageJSON.AddPair('fileName', FileName);
+          MediaMessageJSON.AddPair('caption', MediaCaption);
+          MediaMessageJSON.AddPair('media', Base64Str);
+          JSONToSend.AddPair('mediaMessage', MediaMessageJSON);
+          PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+          try
+            Response := HTTP.Post(FEvolutionApiURL + '/message/sendMedia/' + FNomeInstancia, PostDataStream);
+            // Analisar a resposta JSON e extrair o ID da mensagem
+            ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+            try
+              if ResponseJSON.TryGetValue('key', KeyJSON) then
+              begin
+                Result := KeyJSON.GetValue<string>('id');
+              end;
+            finally
+              ResponseJSON.Free;
+            end;
+          finally
+            PostDataStream.Free;
           end;
         finally
-          ResponseJSON.Free;
+          JSONToSend.Free;
         end;
       finally
-        PostDataStream.Free;
+        SSL.Free;
+        HTTP.Free;
       end;
-    finally
-      JSONToSend.Free;
     end;
-  finally
-    SSL.Free;
-    HTTP.Free;
-  end;
 
+     if FVersion = TVersionOption.V2 then
+    begin
+      Result := '';  // Assume failure by default
+      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+      HTTP := TIdHTTP.Create(nil);
+      SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      Base64Str := CleanInvalidBase64Chars(base64);
+      FileName := nomeArquivo;
+      try
+        SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+        HTTP.IOHandler := SSL;
+        HTTP.Request.ContentType := 'application/json';
+        HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+        JSONToSend := TJSONObject.Create;
+        try
+          JSONToSend.AddPair('number', NumeroTelefone);
+          JSONToSend.AddPair('mediatype', TipoArquivo);
+          JSONToSend.AddPair('fileName', FileName);
+          JSONToSend.AddPair('caption', MediaCaption);
+          JSONToSend.AddPair('media', Base64Str);
+          JSONToSend.AddPair('mediatype', TipoArquivo);
+
+          PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+          try
+            Response := HTTP.Post(FEvolutionApiURL + '/message/sendMedia/' + FNomeInstancia, PostDataStream);
+            // Analisar a resposta JSON e extrair o ID da mensagem
+            ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+            try
+              if ResponseJSON.TryGetValue('key', KeyJSON) then
+              begin
+                Result := KeyJSON.GetValue<string>('id');
+              end;
+            finally
+              ResponseJSON.Free;
+            end;
+          finally
+            PostDataStream.Free;
+          end;
+        finally
+          JSONToSend.Free;
+        end;
+      finally
+        SSL.Free;
+        HTTP.Free;
+      end;
+    end;
+
+
+end;
+
+function TApiEuAtendo.GetMimeTypeByExtension(const FileName: string): string;
+var
+  MimeTypes: TDictionary<string, string>;
+  Ext: string;
+  Extension: string;
+begin
+  MimeTypes := TDictionary<string, string>.Create;
+  try
+
+    // Definir alguns tipos MIME comuns
+    MimeTypes.Add('.html', 'text/html');
+    MimeTypes.Add('.htm', 'text/html');
+    MimeTypes.Add('.txt', 'text/plain');
+    MimeTypes.Add('.jpg', 'image/jpeg');
+    MimeTypes.Add('.jpeg', 'image/jpeg');
+    MimeTypes.Add('.png', 'image/png');
+    MimeTypes.Add('.gif', 'image/gif');
+    MimeTypes.Add('.pdf', 'application/pdf');
+    MimeTypes.Add('.zip', 'application/zip');
+    MimeTypes.Add('.rar', 'application/x-rar-compressed');
+    MimeTypes.Add('.doc', 'application/msword');
+    MimeTypes.Add('.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    MimeTypes.Add('.xls', 'application/vnd.ms-excel');
+    MimeTypes.Add('.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    MimeTypes.Add('.ppt', 'application/vnd.ms-powerpoint');
+    MimeTypes.Add('.pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    MimeTypes.Add('.mp3', 'audio/mpeg');
+    MimeTypes.Add('.mp4', 'video/mp4');
+    MimeTypes.Add('.avi', 'video/x-msvideo');
+    MimeTypes.Add('.mov', 'video/quicktime');
+    MimeTypes.Add('.json', 'application/json');
+    if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+    begin raise Exception.Create('Resposta JSON inválida');end; end;
+
+    // Extrai a extensão do nome do arquivo
+    Extension := ExtractFileExt(FileName).ToLower;
+    // Converte a extensão para minúsculas e garante que ela comece com ponto
+    Ext := LowerCase(Extension);
+    if not Ext.StartsWith('.') then
+      Ext := '.' + Ext;
+    // Busca no dicionário
+    if MimeTypes.TryGetValue(Ext, Result) then
+      Exit
+    else
+      // Retorna tipo MIME genérico para arquivos desconhecidos
+      Result := 'application/octet-stream';
+  finally
+    MimeTypes.Free;
+  end;
 end;
 
 function TApiEuAtendo.EnviarMensagemDeMidia(NumeroTelefone, Mensagem, MediaCaption, caminho_arquivo: string): string;
@@ -889,57 +1194,112 @@ var
   OptionsJSON, MediaMessageJSON: TJSONObject;
   PostDataStream: TStringStream;
   Response: string;
-  Base64Str, FileName, TipoArquivo: string;
+  Base64Str, FileName, TipoArquivo, mimetype: string;
   ResponseJSON, KeyJSON: TJSONObject;
 begin
-  Result := '';  // Assume failure by default
-  NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
-  HTTP := TIdHTTP.Create(nil);
-  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  TipoArquivo := DetectFileType(caminho_arquivo);
-  Base64Str := FileToBase64(caminho_arquivo);
-  FileName := ExtractFileName(caminho_arquivo);
-  try
-    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-    HTTP.IOHandler := SSL;
-    HTTP.Request.ContentType := 'application/json';
-    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
-    JSONToSend := TJSONObject.Create;
-    try
-      JSONToSend.AddPair('number', NumeroTelefone);
-      OptionsJSON := TJSONObject.Create;
-      OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
-      OptionsJSON.AddPair('presence', 'composing');
-      JSONToSend.AddPair('options', OptionsJSON);
-      MediaMessageJSON := TJSONObject.Create;
-      MediaMessageJSON.AddPair('mediatype', TipoArquivo);
-      MediaMessageJSON.AddPair('fileName', FileName);
-      MediaMessageJSON.AddPair('caption', MediaCaption);
-      MediaMessageJSON.AddPair('media', Base64Str);
-      JSONToSend.AddPair('mediaMessage', MediaMessageJSON);
-      PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+
+ if FVersion = TVersionOption.V1 then
+   begin
+      Result := '';  // Assume failure by default
+      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+      HTTP := TIdHTTP.Create(nil);
+      SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      TipoArquivo := DetectFileType(caminho_arquivo);
+      Base64Str := FileToBase64(caminho_arquivo);
+      FileName := ExtractFileName(caminho_arquivo);
       try
-        Response := HTTP.Post(FEvolutionApiURL + '/message/sendMedia/' + FNomeInstancia, PostDataStream);
-        // Analisar a resposta JSON e extrair o ID da mensagem
-        ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+        SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+        HTTP.IOHandler := SSL;
+        HTTP.Request.ContentType := 'application/json';
+        HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+        JSONToSend := TJSONObject.Create;
         try
-          if ResponseJSON.TryGetValue('key', KeyJSON) then
-          begin
-            Result := KeyJSON.GetValue<string>('id');
+          JSONToSend.AddPair('number', NumeroTelefone);
+          OptionsJSON := TJSONObject.Create;
+          OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
+          OptionsJSON.AddPair('presence', 'composing');
+          JSONToSend.AddPair('options', OptionsJSON);
+          MediaMessageJSON := TJSONObject.Create;
+          MediaMessageJSON.AddPair('mediatype', TipoArquivo);
+          MediaMessageJSON.AddPair('fileName', FileName);
+          MediaMessageJSON.AddPair('caption', MediaCaption);
+          MediaMessageJSON.AddPair('media', Base64Str);
+          JSONToSend.AddPair('mediaMessage', MediaMessageJSON);
+          PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+          try
+            Response := HTTP.Post(FEvolutionApiURL + '/message/sendMedia/' + FNomeInstancia, PostDataStream);
+            // Analisar a resposta JSON e extrair o ID da mensagem
+            ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+            try
+              if ResponseJSON.TryGetValue('key', KeyJSON) then
+              begin
+                Result := KeyJSON.GetValue<string>('id');
+              end;
+            finally
+              ResponseJSON.Free;
+            end;
+          finally
+            PostDataStream.Free;
           end;
         finally
-          ResponseJSON.Free;
+          JSONToSend.Free;
         end;
       finally
-        PostDataStream.Free;
+        SSL.Free;
+        HTTP.Free;
       end;
-    finally
-      JSONToSend.Free;
-    end;
-  finally
-    SSL.Free;
-    HTTP.Free;
-  end;
+   end;
+
+
+   if FVersion = TVersionOption.V2 then
+   begin
+      Result := '';  // Assume failure by default
+      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+      HTTP := TIdHTTP.Create(nil);
+      SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      TipoArquivo := DetectFileType(caminho_arquivo);
+      Base64Str := FileToBase64(caminho_arquivo);
+      FileName := ExtractFileName(caminho_arquivo);
+
+      try
+        SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+        HTTP.IOHandler := SSL;
+        HTTP.Request.ContentType := 'application/json';
+        HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+        JSONToSend := TJSONObject.Create;
+        try
+          JSONToSend.AddPair('number', NumeroTelefone);
+          JSONToSend.AddPair('mediatype', TipoArquivo);
+          JSONToSend.AddPair('mimetype', GetMimeTypeByExtension(FileName));
+          JSONToSend.AddPair('caption', MediaCaption);
+          JSONToSend.AddPair('fileName', FileName);
+          JSONToSend.AddPair('media', Base64Str);
+
+          PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+          try
+            Response := HTTP.Post(FEvolutionApiURL + '/message/sendMedia/' + FNomeInstancia, PostDataStream);
+            // Analisar a resposta JSON e extrair o ID da mensagem
+            ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+            try
+              if ResponseJSON.TryGetValue('key', KeyJSON) then
+              begin
+                Result := KeyJSON.GetValue<string>('id');
+              end;
+            finally
+              ResponseJSON.Free;
+            end;
+          finally
+            PostDataStream.Free;
+          end;
+        finally
+          JSONToSend.Free;
+        end;
+      finally
+        SSL.Free;
+        HTTP.Free;
+      end;
+   end;
+
 end;
 
 function TApiEuAtendo.FileToBase64(const FileName: string): string;
@@ -951,6 +1311,9 @@ begin
   Result := '';
   if not FileExists(FileName) then
     Exit;
+
+  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+  begin raise Exception.Create('Resposta JSON inválida');end; end;
 
   InputStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
   try
@@ -964,7 +1327,7 @@ begin
   end;
 end;
 
-function TApiEuAtendo.StatusDaMensagem(idMensagem: string): string;
+function TApiEuAtendo.StatusDaMensagem(idMensagem, NumeroContato: string): string;
 var
   HTTP: TIdHTTP;
   SSL: TIdSSLIOHandlerSocketOpenSSL;
@@ -985,8 +1348,12 @@ begin
     JSONToSend := TJSONObject.Create;
     try
       WhereJSON := TJSONObject.Create;
+      WhereJSON.AddPair('remoteJid', NumeroContato + '@s.whatsapp.net');
       WhereJSON.AddPair('id', idMensagem);
       JSONToSend.AddPair('where', WhereJSON);
+      JSONToSend.AddPair('page', TJSONNumber.Create(1));
+      JSONToSend.AddPair('offset', TJSONNumber.Create(10));
+
       PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
       try
         Response := HTTP.Post(FEvolutionApiURL + '/chat/findStatusMessage/' + FNomeInstancia, PostDataStream);
@@ -1023,80 +1390,122 @@ var
   Response: string;
   ResponseJSON, KeyJSON: TJSONObject;
 begin
-  Result := '';  // Assume failure by default
-  HTTP := TIdHTTP.Create(nil);
-  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
-  try
-     SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-    HTTP.IOHandler := SSL;
-    HTTP.Request.ContentType := 'application/json';
-    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
-    JSONToSend := TJSONObject.Create;
-    try
-      JSONToSend.AddPair('number', NumeroTelefone);
-      TextMessageJSON := TJSONObject.Create;
-      TextMessageJSON.AddPair('text', Mensagem);
-      JSONToSend.AddPair('textMessage', TextMessageJSON);
-      OptionsJSON := TJSONObject.Create;
-      OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
-      JSONToSend.AddPair('options', OptionsJSON);
-      PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+
+  if FVersion = TVersionOption.V1 then
+    begin
+     Result := '';  // Assume failure by default
+      HTTP := TIdHTTP.Create(nil);
+      SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
       try
-        Response := HTTP.Post(FEvolutionApiURL + '/message/sendText/' + FNomeInstancia, PostDataStream);
-        // Analisar a resposta JSON e extrair o ID da mensagem
-        ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+         SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+        HTTP.IOHandler := SSL;
+        HTTP.Request.ContentType := 'application/json';
+        HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+        JSONToSend := TJSONObject.Create;
         try
-          if ResponseJSON.TryGetValue('key', KeyJSON) then
-          begin
-            Result := KeyJSON.GetValue<string>('id');
+          JSONToSend.AddPair('number', NumeroTelefone);
+          TextMessageJSON := TJSONObject.Create;
+          TextMessageJSON.AddPair('text', Mensagem);
+          JSONToSend.AddPair('textMessage', TextMessageJSON);
+          OptionsJSON := TJSONObject.Create;
+          OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
+          JSONToSend.AddPair('options', OptionsJSON);
+          PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+          try
+            Response := HTTP.Post(FEvolutionApiURL + '/message/sendText/' + FNomeInstancia, PostDataStream);
+            // Analisar a resposta JSON e extrair o ID da mensagem
+            ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+            try
+              if ResponseJSON.TryGetValue('key', KeyJSON) then
+              begin
+                Result := KeyJSON.GetValue<string>('id');
+              end;
+            finally
+              ResponseJSON.Free;
+            end;
+          finally
+            PostDataStream.Free;
           end;
         finally
-          ResponseJSON.Free;
+          JSONToSend.Free;
         end;
       finally
-        PostDataStream.Free;
+        SSL.Free;
+        HTTP.Free;
       end;
-    finally
-      JSONToSend.Free;
     end;
-  finally
-    SSL.Free;
-    HTTP.Free;
-  end;
+
+    if FVersion = TVersionOption.V2 then
+    begin
+     Result := '';  // Assume failure by default
+      HTTP := TIdHTTP.Create(nil);
+      SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+      try
+         SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+        HTTP.IOHandler := SSL;
+        HTTP.Request.ContentType := 'application/json';
+        HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+        JSONToSend := TJSONObject.Create;
+        try
+          JSONToSend.AddPair('number', NumeroTelefone);
+          JSONToSend.AddPair('text', Mensagem);
+          JSONToSend.AddPair('delay', TJSONNumber.Create(1200));
+
+          PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+          try
+            Response := HTTP.Post(FEvolutionApiURL + '/message/sendText/' + FNomeInstancia, PostDataStream);
+            // Analisar a resposta JSON e extrair o ID da mensagem
+            ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+            try
+              if ResponseJSON.TryGetValue('key', KeyJSON) then
+              begin
+                Result := KeyJSON.GetValue<string>('id');
+              end;
+            finally
+              ResponseJSON.Free;
+            end;
+          finally
+            PostDataStream.Free;
+          end;
+        finally
+          JSONToSend.Free;
+        end;
+      finally
+        SSL.Free;
+        HTTP.Free;
+      end;
+    end;
+
+
+
 end;
 
-function TApiEuAtendo.CriarInstancia(out ErrorMsg: string): Boolean;
+function TApiEuAtendo.CriarInstancia(const InstanceName, Token, UrlTypebot, NomeTypeBot, Integration: string; RejectCall, GroupsIgnore, AlwaysOnline, ReadMessages, ReadStatus, SyncFullHistory: Boolean): Boolean;
 var
   HTTP: TIdHTTP;
   SSL: TIdSSLIOHandlerSocketOpenSSL;
-  JSONToSend, ResponseJSON, InstanceJSON, HashJSON, ProxyJSON: TJSONObject;
+  JSONToSend, ResponseJSON, InstanceJSON, HashJSON: TJSONObject;
   JSONString: string;
   ResponseStr: string;
   PostDataStream: TStringStream;
   ResultData: TInstanceResponse;
 begin
   Result := False;
-  ErrorMsg := '';
 
-  // Inicializa o ResultData com valores padrão
+  // Initialize ResultData with default values
   FillChar(ResultData, SizeOf(ResultData), 0);
 
-  if FNomeInstancia = '' then
+  if InstanceName = '' then
   begin
-    ErrorMsg := 'Nome da Instância não pode ser vazio.';
     Exit(False);
   end;
-  if FGlobalAPI = '' then
-  begin
-    ErrorMsg := 'Chave API Global não pode ser vazia.';
-    Exit(False);
-  end;
+
 
   HTTP := TIdHTTP.Create(nil);
   SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
   JSONToSend := TJSONObject.Create;
-  ProxyJSON := TJSONObject.Create;
   ResponseJSON := nil;
   try
     SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
@@ -1104,83 +1513,104 @@ begin
     HTTP.Request.ContentType := 'application/json';
     HTTP.Request.CustomHeaders.AddValue('apikey', FGlobalAPI);
 
-    JSONToSend.AddPair('instanceName', FNomeInstancia);
-    JSONToSend.AddPair('apikey', FChaveApi);
-    JSONToSend.AddPair('token', FChaveApi);
-    JSONToSend.AddPair('groups_ignore', false);
+    // Build the JSON to send
+    JSONToSend.AddPair('instanceName', InstanceName);
+    JSONToSend.AddPair('token', Token);
+    JSONToSend.AddPair('qrcode', TJSONBool.Create(True));
+    JSONToSend.AddPair('integration', Integration);
+    JSONToSend.AddPair('reject_call', TJSONBool.Create(RejectCall));
+    JSONToSend.AddPair('groupsIgnore', TJSONBool.Create(GroupsIgnore));
+    JSONToSend.AddPair('alwaysOnline', TJSONBool.Create(AlwaysOnline));
+    JSONToSend.AddPair('readMessages', TJSONBool.Create(ReadMessages));
+    JSONToSend.AddPair('readStatus', TJSONBool.Create(ReadStatus));
+    JSONToSend.AddPair('syncFullHistory', TJSONBool.Create(SyncFullHistory));
 
-    if (FUrlTypebot <> '') and (FNomeTypeBot <> '') then
+    if (UrlTypebot <> '') and (NomeTypeBot <> '') then
     begin
-      JSONToSend.AddPair('typebot_url', FUrlTypebot);
-      JSONToSend.AddPair('typebot', FNomeTypeBot);
-      JSONToSend.AddPair('typebot_expire', '60');
-      JSONToSend.AddPair('typebot_keyword_finish', '#SAIR');
-      JSONToSend.AddPair('typebot_delay_message', '1000');
-      JSONToSend.AddPair('typebot_unknown_message', FTypeBotMensagemNaoEntendeu);
+      JSONToSend.AddPair('typebotUrl', UrlTypebot);
+      JSONToSend.AddPair('typebot', NomeTypeBot);
+      JSONToSend.AddPair('typebotExpire', TJSONNumber.Create(60));
+      JSONToSend.AddPair('typebotKeywordFinish', '#SAIR');
+      JSONToSend.AddPair('typebotDelayMessage', TJSONNumber.Create(1000));
+      JSONToSend.AddPair('typebotUnknownMessage', FTypeBotMensagemNaoEntendeu);
     end;
 
-    // Armazenar o JSON em uma variável string para análise
+    // Convert JSON to string
     JSONString := JSONToSend.ToString;
 
-    // Use JSONString para enviar via HTTP
+    // Prepare the POST data
     PostDataStream := TStringStream.Create(JSONString, TEncoding.UTF8);
     try
       try
+        // Send the POST request
         ResponseStr := HTTP.Post(FEvolutionApiURL + '/instance/create', PostDataStream);
         ResponseJSON := TJSONObject.ParseJSONValue(ResponseStr) as TJSONObject;
         if Assigned(ResponseJSON) then
         begin
-          InstanceJSON := ResponseJSON.Values['instance'] as TJSONObject;
-          HashJSON := ResponseJSON.Values['hash'] as TJSONObject;
-          ResultData.InstanceName := InstanceJSON.Values['instanceName'].Value;
-          ResultData.Status := InstanceJSON.Values['status'].Value;
-          ResultData.ApiKey := HashJSON.Values['apikey'].Value;
+          // Extract 'instance' object
+          if ResponseJSON.Values['instance'] is TJSONObject then
+          begin
+            InstanceJSON := ResponseJSON.Values['instance'] as TJSONObject;
+            ResultData.InstanceName := InstanceJSON.Values['instanceName'].Value;
+            ResultData.Status := InstanceJSON.Values['status'].Value;
+            // Extract 'instanceId' if available (version 2.0)
+            if InstanceJSON.Values['instanceId'] <> nil then
+              ResultData.InstanceId := InstanceJSON.Values['instanceId'].Value;
+          end
+          else
+          begin
+            Exit(False);
+            Exit(False);
+          end;
+
+          // Extract 'hash'
+          if ResponseJSON.Values['hash'] is TJSONObject then
+          begin
+            // Version 1.0: 'hash' is an object containing 'apikey'
+            HashJSON := ResponseJSON.Values['hash'] as TJSONObject;
+            ResultData.ApiKey := HashJSON.Values['apikey'].Value;
+          end
+          else if ResponseJSON.Values['hash'] is TJSONString then
+          begin
+            // Version 2.0: 'hash' is a string representing the API key
+            ResultData.ApiKey := ResponseJSON.Values['hash'].Value;
+          end
+          else
+          begin
+            Exit(False);
+            Exit(False);
+          end;
+
           FChaveApi := ResultData.ApiKey;
+
+          // Trigger the event with the result data
           DoCriarInstancia(ResultData);
           Result := True;
         end
         else
         begin
-          ErrorMsg := 'Resposta JSON inválida recebida.';
+          Exit(False);
           Result := False;
         end;
       except
         on E: EIdHTTPProtocolException do
-        begin
-          ResponseStr := E.ErrorMessage;
-          ResponseJSON := TJSONObject.ParseJSONValue(ResponseStr) as TJSONObject;
-          if Assigned(ResponseJSON) and (ResponseJSON.Values['response'] is TJSONObject) then
-          begin
-            if (ResponseJSON.Values['response'] as TJSONObject).Values['message'] is TJSONArray then
-              ErrorMsg := ((ResponseJSON.Values['response'] as TJSONObject).Values['message'] as TJSONArray).Items[0].Value
-            else
-              ErrorMsg := E.ErrorMessage;
-          end
-          else
-          begin
-            ErrorMsg := E.ErrorMessage;
-          end;
-          Result := False;
-        end;
+        Exit(False);
         on E: Exception do
-        begin
-          ErrorMsg := 'Erro ao criar a instância: ' + E.Message;
-          Result := False;
-        end;
+        Exit(False);
       end;
     finally
       PostDataStream.Free;
     end;
   finally
-    ProxyJSON.Free;
-   // if Assigned(JSONToSend) then
-   //   JSONToSend.Free;
-   // if Assigned(ResponseJSON) then
-    //  ResponseJSON.Free;
-   // SSL.Free;
-    //HTTP.Free;
+    // Free allocated objects
+    if Assigned(ResponseJSON) then
+      ResponseJSON.Free;
+    JSONToSend.Free;
+    SSL.Free;
+    HTTP.Free;
   end;
 end;
+
 
 
 function TApiEuAtendo.AlterarPropriedadesInstancia(rejeitarLigacao,ignorarGrupos,sempreOnline,lerMensagens,lerStatus : Boolean;mensagemRejeitaLigacao:String; out ErrorMsg: string): Boolean;
@@ -1207,12 +1637,12 @@ begin
     HTTP.Request.ContentType := 'application/json';
     HTTP.Request.CustomHeaders.AddValue('apikey', FGlobalAPI);
 
-    JSONToSend.AddPair('reject_call', rejeitarLigacao);
-    JSONToSend.AddPair('groups_ignore', ignorarGrupos);
-    JSONToSend.AddPair('always_online', sempreOnline);
-    JSONToSend.AddPair('read_messages', lerMensagens);
-    JSONToSend.AddPair('read_status', lerStatus);
-    JSONToSend.AddPair('sync_full_history', false);
+    JSONToSend.AddPair('reject_call', VariantToJSON(rejeitarLigacao));
+    JSONToSend.AddPair('groups_ignore', VariantToJSON(ignorarGrupos));
+    JSONToSend.AddPair('always_online', VariantToJSON(sempreOnline));
+    JSONToSend.AddPair('read_messages', VariantToJSON(lerMensagens));
+    JSONToSend.AddPair('read_status', VariantToJSON(lerStatus));
+    JSONToSend.AddPair('sync_full_history', VariantToJSON(false));
     JSONToSend.AddPair('msg_call', mensagemRejeitaLigacao);
 
 
@@ -1318,9 +1748,19 @@ begin
           // Pegando o primeiro objeto do array
           JSONObject := JSONArray as TJSONObject;
           // Extraindo os valores
-          Contato.fone := JSONObject.GetValue<string>('wuid');
-          Contato.Nome := JSONObject.GetValue<string>('description');
-          Contato.foto := JSONObject.GetValue<string>('picture');
+          try
+           begin
+            Contato.fone := JSONObject.GetValue<string>('wuid');
+            Contato.foto := JSONObject.GetValue<string>('picture');
+            Contato.Nome := JSONObject.GetValue<string>('name');
+           end;
+          except on E: Exception do
+          begin
+           Contato.fone := JSONObject.GetValue<string>('wuid');
+           Contato.foto := JSONObject.GetValue<string>('picture');
+          end;
+          end;
+
         end;
       except
         on E: EIdHTTPProtocolException do
