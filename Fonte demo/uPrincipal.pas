@@ -38,7 +38,6 @@ type
     Button8: TButton;
     ApiEuAtendo1: TApiEuAtendo;
     FileOpenDialog1: TFileOpenDialog;
-    Button9: TButton;
     edtIDMensagem: TEdit;
     Label8: TLabel;
     Button10: TButton;
@@ -63,6 +62,10 @@ type
     memoMensagemEnviar: TMemo;
     Button19: TButton;
     Button20: TButton;
+    Label12: TLabel;
+    edtQtdContatos: TEdit;
+    cbVersao: TComboBox;
+    Label13: TLabel;
  procedure Button1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure voceAtendeAPIObterQrCode(Sender: TObject;
@@ -107,6 +110,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure Button19Click(Sender: TObject);
     procedure Button20Click(Sender: TObject);
+    procedure cbVersaoChange(Sender: TObject);
   private
     procedure LoadBase64ToImage(const Base64: string; Image: TImage);
     function SaveImageFromURLToDisk(const ImageURL,
@@ -173,11 +177,13 @@ procedure TForm9.ApiEuAtendo1CriarInstancia(Sender: TObject;
 procedure TForm9.ApiEuAtendo1ObterContatos(Sender: TObject;
   const Contatos: TContatos);
 var
-  I: Integer;
+  I,total: Integer;
 begin
-  Memo1.Lines.Add('Contatos obtidos:');
+  total := Length(Contatos);
+  Memo1.Lines.Add('Contatos obtidos: ' +inttoStr(total));
   for I := 0 to Length(Contatos) - 1 do
   begin
+
     Memo1.Lines.Add(Format('Fone: %s, Nome: %s, Foto: %s', [Contatos[I].fone, Contatos[I].Nome, Contatos[I].foto]));
   end;
 end;
@@ -219,12 +225,31 @@ procedure TForm9.ApiEuAtendo1ObterInstancias(Sender: TObject;
 begin
    i:=0;
 
-   for I := 0 to Length(Instancias) - 1 do
+   if ApiEuAtendo1.Version = TVersionOption.V1 then
      begin
-          memo1.Lines.Add('Instancia ' + Instancias[i].InstanceName);
-          memo1.Lines.Add('Chave ' + Instancias[i].ApiKey);
-          memo1.Lines.Add('Numero ' + Instancias[i].Owner);
-          memo1.Lines.Add('---------------------------------------- ' + Instancias[i].Owner);
+
+      for I := 0 to Length(Instancias) - 1 do
+       begin
+            memo1.Lines.Add('Instancia ' + Instancias[i].InstanceName);
+            memo1.Lines.Add('Chave ' + Instancias[i].ApiKey);
+            memo1.Lines.Add('Numero ' + Instancias[i].Owner);
+            memo1.Lines.Add('---------------------------------------- ' + Instancias[i].Owner);
+       end;
+
+     end;
+
+
+  if ApiEuAtendo1.Version = TVersionOption.V2 then
+     begin
+
+      for I := 0 to Length(Instancias) - 1 do
+       begin
+            memo1.Lines.Add('Instancia ' + Instancias[i].InstanceName);
+            memo1.Lines.Add('Chave ' + Instancias[i].ApiKey);
+            memo1.Lines.Add('Numero ' + Instancias[i].PhoneNumber);
+            memo1.Lines.Add('---------------------------------------- ' + Instancias[i].Owner);
+       end;
+
      end;
 
 
@@ -245,7 +270,7 @@ end;
 
 procedure TForm9.Button10Click(Sender: TObject);
 begin
-memo1.Lines.Add(ApiEuAtendo1.StatusDaMensagem(edtIDMensagem.Text));
+memo1.Lines.Add(ApiEuAtendo1.StatusDaMensagem(edtIDMensagem.Text,edtNumeroContato.text));
 end;
 
 procedure TForm9.Button11Click(Sender: TObject);
@@ -401,24 +426,24 @@ end;
 
 procedure TForm9.FormCreate(Sender: TObject);
 begin
-ApiEuAtendo1.ChaveApi        := edtSenha.Text;
-ApiEuAtendo1.NomeInstancia   := edtNome.Text;
-ApiEuAtendo1.EvolutionApiURL := edtUrl.Text;
-ApiEuAtendo1.GlobalAPI       := edtApiGlobal.text;
+
+          ApiEuAtendo1.ChaveApi        := edtSenha.Text;
+          ApiEuAtendo1.NomeInstancia   := edtNome.Text;
+          ApiEuAtendo1.EvolutionApiURL := edtUrl.Text;
+          ApiEuAtendo1.GlobalAPI       := edtApiGlobal.text;
 
 
-     Button17.Enabled := false;
-     Button6.Enabled  := false;
-     Button3.Enabled  := false;
-     Button5.Enabled  := false;
-     Button18.Enabled := false;
-     Button9.Enabled  := false;
-     Button10.Enabled := false;
-     Button13.Enabled := false;
-     Button12.Enabled := false;
-     Button7.Enabled  := false;
-     Button14.Enabled := false;
-     Button19.Enabled := false;
+          Button17.Enabled := false;
+          Button6.Enabled  := false;
+          Button3.Enabled  := false;
+          Button5.Enabled  := false;
+          Button18.Enabled := false;
+          Button10.Enabled := false;
+          Button13.Enabled := false;
+          Button12.Enabled := false;
+          Button7.Enabled  := false;
+          Button14.Enabled := false;
+          Button19.Enabled := false;
 
 end;
 
@@ -443,9 +468,10 @@ begin
   try
 
     ApiEuAtendo1.NomeInstancia := edtNome.Text;
-    ApiEuAtendo1.ChaveApi := edtSenha.Text;
+    ApiEuAtendo1.ChaveApi      := edtSenha.Text;
 
-    if not ApiEuAtendo1.CriarInstancia(ErrorMsg) then
+
+   if not ApiEuAtendo1.CriarInstancia(ErrorMsg) then
     begin
       ShowMessage('Erro ao criar a instância: ' + ErrorMsg);
     end
@@ -467,7 +493,7 @@ procedure TForm9.Button20Click(Sender: TObject);
 var
 erro:String;
 begin
-ApiEuAtendo1.AlterarPropriedadesInstancia(false,false,false,false,false,'esse numero desativou as ligações',erro);
+ApiEuAtendo1.AlterarPropriedadesInstancia(true,true,true,true,true,'esse numero desativou as ligações',erro);
 end;
 
 procedure TForm9.Button2Click(Sender: TObject);
@@ -480,7 +506,7 @@ var
 id:String;
 begin
  edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto(edtNumeroContato.Text,memoMensagemEnviar.Lines.text);
- edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto('559982385000',memoMensagemEnviar.Lines.text);
+ edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto('559982385000', 'Estou testando o seu componente');
 end;
 
 procedure TForm9.Button4Click(Sender: TObject);
@@ -493,7 +519,7 @@ begin
    FileOpenDialog1.Execute;
    if FileOpenDialog1.FileName <> '' then
      begin
-     edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeMidia('559982385000','',memoMensagemEnviar.Lines.Text,FileOpenDialog1.FileName);
+     edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeMidia('559982385000','','Estou testando o seu componente',FileOpenDialog1.FileName);
      edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeMidia(edtNumeroContato.Text,'',memoMensagemEnviar.Lines.Text,FileOpenDialog1.FileName);
      end;
 end;
@@ -512,6 +538,7 @@ procedure TForm9.Button8Click(Sender: TObject);
 begin
 memo1.Lines.Clear;
 ApiEuAtendo1.obterInstancias;
+//ApiEuAtendo1.obterDadosInstancia
 end;
 
 procedure TForm9.Button9Click(Sender: TObject);
@@ -580,6 +607,28 @@ try
   end;
 end;
 
+procedure TForm9.cbVersaoChange(Sender: TObject);
+begin
+ if cbVersao.ItemIndex = 0 then
+   begin
+   ApiEuAtendo1.VersionAPI := TVersionOption.V1;
+   edtApiGlobal.Text := 'ASD3F21APIDEVS6A5SPAULOJRDEVFA1';
+   edtUrl.Text := 'https://apiv1demo.apidevs.app';
+
+   ApiEuAtendo1.EvolutionApiURL := edtUrl.text;
+   ApiEuAtendo1.GlobalAPI := edtApiGlobal.Text;
+
+   end
+   else
+   begin
+   edtApiGlobal.Text := 'ASD3F21APIDEVS6A5SPAULOJRDEVFA1';
+   edtUrl.Text := 'https://apiv2demo.apidevs.app';
+   ApiEuAtendo1.VersionAPI := TVersionOption.V2 ;
+   ApiEuAtendo1.EvolutionApiURL := edtUrl.text;
+   ApiEuAtendo1.GlobalAPI := edtApiGlobal.Text;
+   end;
+end;
+
 procedure TForm9.edtApiGlobalExit(Sender: TObject);
 begin
 ApiEuAtendo1.GlobalAPI := edtApiGlobal.Text;
@@ -598,36 +647,78 @@ end;
 
 procedure TForm9.edtStatusChange(Sender: TObject);
 begin
-if edtStatus.Text <> 'open' then
-    begin
-     Button17.Enabled := false;
-     Button6.Enabled  := false;
-     Button3.Enabled  := false;
-     Button5.Enabled  := false;
-     Button18.Enabled := false;
-     Button9.Enabled  := false;
-     Button10.Enabled := false;
-     Button13.Enabled := false;
-     Button12.Enabled := false;
-     Button7.Enabled  := false;
-     Button14.Enabled := false;
-     Button19.Enabled := false;
-    end
-    else
-    begin
-     Button17.Enabled := true;
-     Button6.Enabled  := true;
-     Button3.Enabled  := true;
-     Button5.Enabled  := true;
-     Button18.Enabled := true;
-     Button9.Enabled  := true;
-     Button10.Enabled := true;
-     Button13.Enabled := true;
-     Button12.Enabled := true;
-     Button7.Enabled  := true;
-     Button14.Enabled := true;
-     Button19.Enabled := true;
-    end;
+
+if ApiEuAtendo1.Version = TVersionOption.V1 then
+begin
+  if edtStatus.Text <> 'open' then
+      begin
+       Button17.Enabled := false;
+       Button6.Enabled  := false;
+       Button3.Enabled  := false;
+       Button5.Enabled  := false;
+       Button18.Enabled := false;
+       Button10.Enabled := false;
+       Button13.Enabled := false;
+       Button12.Enabled := false;
+       Button7.Enabled  := false;
+       Button14.Enabled := false;
+       Button19.Enabled := false;
+      end
+      else
+      begin
+       Button17.Enabled := True;
+       Button6.Enabled  := True;
+       Button3.Enabled  := True;
+       Button5.Enabled  := True;
+       Button18.Enabled := True;
+       Button10.Enabled := True;
+       Button13.Enabled := True;
+       Button12.Enabled := True;
+       Button7.Enabled  := True;
+       Button14.Enabled := True;
+       Button19.Enabled := True;
+      end;
+  end;
+
+  if ApiEuAtendo1.Version = TVersionOption.V2 then
+begin
+  if edtStatus.Text <> 'open' then
+      begin
+       Button17.Enabled := false;
+       Button6.Enabled  := false;
+       Button3.Enabled  := false;
+       Button5.Enabled  := false;
+       Button18.Enabled := false;
+       Button10.Enabled := false;
+       Button13.Enabled := false;
+       Button12.Enabled := false;
+       Button7.Enabled  := false;
+       Button14.Enabled := false;
+       Button19.Enabled := false;
+      end
+      else
+      begin
+        Button17.Enabled := True;
+        Button6.Enabled  := True;
+        Button3.Enabled  := True;
+        Button5.Enabled  := True;
+        Button18.Enabled := True;
+        Button10.Enabled := True;
+        Button13.Enabled := True;
+        Button12.Enabled := True;
+        Button7.Enabled  := True;
+        Button14.Enabled := True;
+        Button19.Enabled := True;
+      end;
+
+
+  end;
+
+
+
+
+
+
 end;
 
 procedure TForm9.edtUrlExit(Sender: TObject);
