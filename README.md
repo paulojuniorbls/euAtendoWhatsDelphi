@@ -18,7 +18,7 @@ https://youtu.be/4tYj7OAqD98
 
 ********  Servidor para testes do componente **************
 *            ************V1*************                  *
-**ApiGlobal** B6D711FCDE4D4FD5936544120E713976PauloJunior *
+**ApiGlobal** ASD3F21APIDEVS6A5SPAULOJRDEVFA1 *
 **endPoint** https://apiv1demo.apidevs.app                *
 **Manager** https://apiv1demo.apidevs.app/manager         *
 *                                                         *
