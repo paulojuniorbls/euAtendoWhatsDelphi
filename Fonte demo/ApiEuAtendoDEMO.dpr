@@ -2,7 +2,8 @@ program ApiEuAtendoDEMO;
 
 uses
   Vcl.Forms,
-  uPrincipal in 'uPrincipal.pas' {Form9};
+  uPrincipal in 'uPrincipal.pas' {Form9},
+  Functions in 'Functions.pas';
 
 {$R *.res}
 

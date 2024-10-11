@@ -39,7 +39,7 @@ object Form9: TForm9
     WordWrap = True
   end
   object Label3: TLabel
-    Left = 466
+    Left = 514
     Top = 8
     Width = 141
     Height = 30
@@ -62,15 +62,15 @@ object Form9: TForm9
     Caption = 'Mensagem a enviar'
   end
   object Label8: TLabel
-    Left = 333
-    Top = 208
+    Left = 349
+    Top = 213
     Width = 161
     Height = 15
     Caption = 'Codigo da mensagem enviada'
   end
   object Label9: TLabel
-    Left = 333
-    Top = 142
+    Left = 349
+    Top = 147
     Width = 146
     Height = 30
     Caption = 'Buscar participantes de um grupo (coloque o ID aqui)'
@@ -82,6 +82,14 @@ object Form9: TForm9
     Width = 118
     Height = 30
     Caption = 'Nome contato obtido pelo numero'
+    WordWrap = True
+  end
+  object Label12: TLabel
+    Left = 514
+    Top = 73
+    Width = 71
+    Height = 15
+    Caption = 'Qtd Contatos'
     WordWrap = True
   end
   object Button1: TButton
@@ -99,7 +107,7 @@ object Form9: TForm9
     Width = 145
     Height = 23
     TabOrder = 1
-    Text = 'Teste'
+    Text = 'integrar'
     OnExit = edtNomeExit
   end
   object edtSenha: TEdit
@@ -108,12 +116,12 @@ object Form9: TForm9
     Width = 145
     Height = 23
     TabOrder = 2
-    Text = '1234569'
+    Text = 'B1E77E3C8E6C-4C8A-A7BA-31F37FBEC33B'
     OnExit = edtSenhaExit
   end
   object edtStatus: TEdit
-    Left = 464
-    Top = 57
+    Left = 510
+    Top = 44
     Width = 145
     Height = 23
     ReadOnly = True
@@ -401,7 +409,7 @@ object Form9: TForm9
   end
   object Button7: TButton
     Left = 263
-    Top = 496
+    Top = 465
     Width = 135
     Height = 25
     Caption = 'Obter lista de grupos'
@@ -418,29 +426,20 @@ object Form9: TForm9
   end
   object Button8: TButton
     Left = 263
-    Top = 434
+    Top = 403
     Width = 135
     Height = 25
     Caption = 'Listar instancias'
     TabOrder = 12
     OnClick = Button8Click
   end
-  object Button9: TButton
-    Left = 263
-    Top = 403
-    Width = 135
-    Height = 25
-    Caption = 'Enviar Lista/Menu'
-    TabOrder = 13
-    OnClick = Button9Click
-  end
   object edtIDMensagem: TEdit
-    Left = 333
-    Top = 229
+    Left = 349
+    Top = 234
     Width = 161
     Height = 23
     ReadOnly = True
-    TabOrder = 14
+    TabOrder = 13
   end
   object Button10: TButton
     Left = 410
@@ -448,7 +447,7 @@ object Form9: TForm9
     Width = 135
     Height = 25
     Caption = 'Status da mensagem'
-    TabOrder = 15
+    TabOrder = 14
     OnClick = Button10Click
   end
   object Button11: TButton
@@ -457,16 +456,16 @@ object Form9: TForm9
     Width = 135
     Height = 25
     Caption = 'Excluir instancia'
-    TabOrder = 16
+    TabOrder = 15
     OnClick = Button11Click
   end
   object Button12: TButton
     Left = 263
-    Top = 465
+    Top = 434
     Width = 135
     Height = 25
     Caption = 'Obter contatos'
-    TabOrder = 17
+    TabOrder = 16
     OnClick = Button12Click
   end
   object Button13: TButton
@@ -475,24 +474,24 @@ object Form9: TForm9
     Width = 135
     Height = 25
     Caption = 'Verifica se tem whats'
-    TabOrder = 18
+    TabOrder = 17
     OnClick = Button13Click
   end
   object Button14: TButton
     Left = 263
-    Top = 527
+    Top = 496
     Width = 135
     Height = 25
     Caption = 'Listar participante grupo'
-    TabOrder = 19
+    TabOrder = 18
     OnClick = Button14Click
   end
   object edtIdGrupo: TEdit
-    Left = 333
-    Top = 179
+    Left = 349
+    Top = 184
     Width = 121
     Height = 23
-    TabOrder = 20
+    TabOrder = 19
     Text = 'edtIdGrupo'
   end
   object Button15: TButton
@@ -501,7 +500,7 @@ object Form9: TForm9
     Width = 135
     Height = 25
     Caption = 'Reiniciar instancia'
-    TabOrder = 21
+    TabOrder = 20
     OnClick = Button15Click
   end
   object Button16: TButton
@@ -510,7 +509,7 @@ object Form9: TForm9
     Width = 135
     Height = 25
     Caption = 'Desconectar instancia'
-    TabOrder = 22
+    TabOrder = 21
     OnClick = Button16Click
   end
   object Button17: TButton
@@ -519,7 +518,7 @@ object Form9: TForm9
     Width = 135
     Height = 25
     Caption = 'Dados do contato'
-    TabOrder = 23
+    TabOrder = 22
     OnClick = Button17Click
   end
   object edtNomeContato: TEdit
@@ -528,7 +527,7 @@ object Form9: TForm9
     Width = 121
     Height = 23
     ReadOnly = True
-    TabOrder = 24
+    TabOrder = 23
   end
   object Button18: TButton
     Left = 410
@@ -536,15 +535,15 @@ object Form9: TForm9
     Width = 135
     Height = 25
     Caption = 'Enviar base64'
-    TabOrder = 25
+    TabOrder = 24
     OnClick = Button18Click
   end
   object Panel1: TPanel
     Left = 694
     Top = 8
     Width = 272
-    Height = 178
-    TabOrder = 26
+    Height = 215
+    TabOrder = 25
     object Label6: TLabel
       Left = 106
       Top = 75
@@ -574,23 +573,43 @@ object Form9: TForm9
       ParentFont = False
       WordWrap = True
     end
+    object Label13: TLabel
+      Left = 45
+      Top = 186
+      Width = 71
+      Height = 15
+      Caption = 'Vers'#227'o da API'
+    end
     object edtApiGlobal: TEdit
       Left = 44
       Top = 96
       Width = 173
       Height = 23
       TabOrder = 0
-      Text = 'B6D711FCDE4D4FD5936544120E713976PauloJunior'
+      Text = 'ASD3F21APIDEVS6A5SPAULOJRDEVFA1'
       OnExit = edtApiGlobalExit
     end
     object edtUrl: TEdit
-      Left = 52
+      Left = 44
       Top = 146
       Width = 173
       Height = 23
       TabOrder = 1
-      Text = 'https://evo.voceatende.com.br'
+      Text = 'https://apiv2demo.apidevs.app'
       OnExit = edtUrlExit
+    end
+    object cbVersao: TComboBox
+      Left = 136
+      Top = 183
+      Width = 81
+      Height = 23
+      ItemIndex = 1
+      TabOrder = 2
+      Text = 'V2'
+      OnChange = cbVersaoChange
+      Items.Strings = (
+        'V1'
+        'V2')
     end
   end
   object memoMensagemEnviar: TMemo
@@ -604,7 +623,7 @@ object Form9: TForm9
       ''
       '*Pode usar negrito* e qualquer outro comando nativo '
       'do WhatsApp')
-    TabOrder = 27
+    TabOrder = 26
   end
   object Button19: TButton
     Left = 263
@@ -617,7 +636,7 @@ object Form9: TForm9
     Caption = 'Marcar contatos no grupo'
     ParentShowHint = False
     ShowHint = True
-    TabOrder = 28
+    TabOrder = 27
     OnClick = Button19Click
   end
   object Button20: TButton
@@ -626,23 +645,34 @@ object Form9: TForm9
     Width = 282
     Height = 25
     Caption = 'Alterar configuracao da instancia'
-    TabOrder = 29
+    TabOrder = 28
     OnClick = Button20Click
   end
+  object edtQtdContatos: TEdit
+    Left = 510
+    Top = 90
+    Width = 145
+    Height = 23
+    ReadOnly = True
+    TabOrder = 29
+    Text = 'status'
+    OnChange = edtStatusChange
+  end
   object ApiEuAtendo1: TApiEuAtendo
+    VersionAPI = V2
     OnObterInstancias = ApiEuAtendo1ObterInstancias
     OnObterContatos = ApiEuAtendo1ObterContatos
     CodigoPais = '55'
     DDDPadrao = '99'
     OnObterGrupos = ApiEuAtendo1ObterGrupos
     OnObterFotoPerfil = ApiEuAtendo1ObterFotoPerfil
-    GlobalAPI = 'B6D711FCDE4D4FD5936544120E713976PauloJunior'
-    EvolutionApiURL = 'https://evo.voceatende.com.br'
+    GlobalAPI = 'ASD3F21APIDEVS6A5SPAULOJRDEVFA1'
+    EvolutionApiURL = 'https://apiv2demo.apidevs.app'
     OnStatusInstancia = ApiEuAtendo1StatusInstancia
     OnCriarInstancia = ApiEuAtendo1CriarInstancia
     OnObterQrCode = ApiEuAtendo1ObterQrCode
-    Left = 608
-    Top = 176
+    Left = 624
+    Top = 128
   end
   object FileOpenDialog1: TFileOpenDialog
     FavoriteLinks = <>

@@ -102,6 +102,7 @@
             <Form>Form9</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="Functions.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
