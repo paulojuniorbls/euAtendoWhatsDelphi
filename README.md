@@ -24,8 +24,8 @@ https://youtu.be/4tYj7OAqD98
 *                                                         *
 *            ************V2*************                  *
 **ApiGlobal** ASD3F21APIDEVS6A5SPAULOJRDEVFA1             *
-**endPoint** https://apiv2demo.apidevs.app/               *
-**Manager** https://apiv2demo.apidevs.app/manager         *
+**endPoint** https://apiv2demo.apicomponente.com.br/      *
+**Manager** https://apiv2demo.apicomponente.com.br/manager*
 *                                                         * 
 ********  Servidor para testes do componente **************
 
