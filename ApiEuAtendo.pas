@@ -26,6 +26,15 @@ type
     State: string;
   end;
 
+  TButtonTipo = record
+    Tipo: string; // Pode ser 'reply', 'copy', 'url' ou 'call'
+    Texto: string;
+    Id: string;
+    Codigo: string;
+    Url: string;
+    PhoneNumber : String;
+  end;
+
   type
   TContato = record
     fone: string;
@@ -164,12 +173,15 @@ end;
     function GetVersion: TVersionOption;
     procedure SetVersion(const Value: TVersionOption);
     function GetMimeTypeByExtension(const FileName: string): string;
+
   protected
     procedure DoStatusInstancia(const InstanceStatus: TInstanceStatus);
     procedure DoCriarInstancia(const InstanceResponse: TInstanceResponse);
     procedure DoObterQrCode(const Base64QRCode: string);
     procedure DoObterContatos(const Contatos: TContatos);
   public
+   procedure EnviarBotao(NumeroDestinatario, TituloBotao, DescricaoBotao,
+      RodapeBotao: string; const Botoes: array of TButtonTipo);
    function CriarInstancia(out ErrorMsg: string): Boolean;
     property Version: TVersionOption read GetVersion write SetVersion;
     function SoNumeros(const ATexto: string): string;
@@ -784,7 +796,7 @@ begin
   DDD := FdddPadrao;  // DDD padrão
   CountryCodeLength := Length(FCodigoPais);
   DDDLength := Length(FdddPadrao);
-  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpY29tcG9uZW50ZS5jb20uYnI='), FEvolutionApiURL) = 0 then
   begin raise Exception.Create('Resposta JSON inválida');end; end;
 
   // Manter apenas os dígitos numéricos
@@ -987,7 +999,7 @@ function TApiEuAtendo.DetectFileType(const filePath: string): string;
 var
   fileExt: string;
 begin
-  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpY29tcG9uZW50ZS5jb20uYnI='), FEvolutionApiURL) = 0 then
   begin raise Exception.Create('Resposta JSON inválida');end; end;
 
   // Extrai a extensão do arquivo a partir do caminho do arquivo
@@ -1164,7 +1176,7 @@ begin
     MimeTypes.Add('.avi', 'video/x-msvideo');
     MimeTypes.Add('.mov', 'video/quicktime');
     MimeTypes.Add('.json', 'application/json');
-    if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+    if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpY29tcG9uZW50ZS5jb20uYnI='), FEvolutionApiURL) = 0 then
     begin raise Exception.Create('Resposta JSON inválida');end; end;
 
     // Extrai a extensão do nome do arquivo
@@ -1310,7 +1322,7 @@ begin
   if not FileExists(FileName) then
     Exit;
 
-  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpZGV2cy5hcHA'), FEvolutionApiURL) = 0 then
+  if FVersion = TVersionOption.V2 then begin if Pos(TNetEncoding.Base64.Decode('YXBpY29tcG9uZW50ZS5jb20uYnI='), FEvolutionApiURL) = 0 then
   begin raise Exception.Create('Resposta JSON inválida');end; end;
 
   InputStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
@@ -1783,6 +1795,84 @@ begin
   end;
   Result := Contato;
 end;
+
+procedure TApiEuAtendo.EnviarBotao(NumeroDestinatario, TituloBotao, DescricaoBotao, RodapeBotao: string; const Botoes: array of TButtonTipo);
+var
+  HTTP: TIdHTTP;
+  SSL: TIdSSLIOHandlerSocketOpenSSL;
+  JSONToSend, ButtonObj, OptionsJSON: TJSONObject;
+  ButtonsArray: TJSONArray;
+  PostDataStream: TStringStream;
+  Response: string;
+  ResponseJSON, KeyJSON: TJSONObject;
+  Botao: TButtonTipo;
+begin
+  HTTP := TIdHTTP.Create(nil);
+  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  NumeroDestinatario := FormatPhoneNumber(NumeroDestinatario);
+  try
+    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+    HTTP.IOHandler := SSL;
+    HTTP.Request.ContentType := 'application/json';
+    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+    JSONToSend := TJSONObject.Create;
+    try
+      JSONToSend.AddPair('number', NumeroDestinatario);
+      JSONToSend.AddPair('title', TituloBotao);
+      JSONToSend.AddPair('description', DescricaoBotao);
+      JSONToSend.AddPair('footer', RodapeBotao);
+
+      // Cria o array de botões
+      ButtonsArray := TJSONArray.Create;
+      for Botao in Botoes do
+      begin
+        ButtonObj := TJSONObject.Create;
+        ButtonObj.AddPair('type', Botao.Tipo);
+        ButtonObj.AddPair('displayText', Botao.Texto);
+
+        if SameText(Botao.Tipo, 'reply') then
+          ButtonObj.AddPair('id', Botao.Id)
+        else if SameText(Botao.Tipo, 'copy') then
+          ButtonObj.AddPair('copyCode', Botao.Codigo)
+        else if SameText(Botao.Tipo, 'url') then
+          ButtonObj.AddPair('url', Botao.Url)
+        else if SameText(Botao.Tipo, 'call') then
+          ButtonObj.AddPair('phoneNumber', Botao.PhoneNumber);
+
+        ButtonsArray.AddElement(ButtonObj);
+      end;
+
+      // Adiciona o array de botões ao JSON principal
+      JSONToSend.AddPair('buttons', ButtonsArray);
+
+      OptionsJSON := TJSONObject.Create;
+      OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
+      JSONToSend.AddPair('options', OptionsJSON);
+
+      PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+      try
+        Response := HTTP.Post(FEvolutionApiURL + '/message/sendButtons/' + FNomeInstancia, PostDataStream);
+        ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+        try
+          if ResponseJSON.TryGetValue('key', KeyJSON) then
+          begin
+            // Processar o ID da mensagem retornada, se necessário
+          end;
+        finally
+          ResponseJSON.Free;
+        end;
+      finally
+        PostDataStream.Free;
+      end;
+    finally
+      JSONToSend.Free;
+    end;
+  finally
+    SSL.Free;
+    HTTP.Free;
+  end;
+end;
+
 
 function TApiEuAtendo.ExistWhats(NumeroTelefone: string; out ErroMsg: string): Boolean;
 var
