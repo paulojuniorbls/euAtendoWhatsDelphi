@@ -179,6 +179,7 @@ end;
     procedure DoCriarInstancia(const InstanceResponse: TInstanceResponse);
     procedure DoObterQrCode(const Base64QRCode: string);
     procedure DoObterContatos(const Contatos: TContatos);
+    function GetVersao: string;
   public
    procedure EnviarBotao(NumeroDestinatario, TituloBotao, DescricaoBotao,
       RodapeBotao: string; const Botoes: array of TButtonTipo);
@@ -212,6 +213,7 @@ end;
     constructor Create(AOwner: TComponent);
   published
     property VersionAPI: TVersionOption read GetVersion write SetVersion default V1;
+    property VersaoComponente: string read GetVersao;
     property ProxyHost: String read FProxyHost write FProxyHost;
     property ProxyPort: String read FProxyPort write FProxyPort;
     property ProxyProtocol: String read FProxyProtocol write FProxyProtocol;
@@ -242,9 +244,17 @@ implementation
 uses
   uFunctions;
 
+  const
+  VERSAO_COMPONENTE = '2.0.0';
+
 function TApiEuAtendo.GetVersion: TVersionOption;
 begin
   Result := FVersion;
+end;
+
+function TApiEuAtendo.GetVersao: string;
+begin
+  Result := VERSAO_COMPONENTE;
 end;
 
 procedure TApiEuAtendo.SetVersion(const Value: TVersionOption);
