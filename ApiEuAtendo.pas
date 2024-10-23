@@ -1538,12 +1538,12 @@ begin
     JSONToSend.AddPair('token', FChaveApi);
     JSONToSend.AddPair('integration', 'WHATSAPP-BAILEYS');
     JSONToSend.AddPair('qrcode', TJSONBool.Create(True));
-    JSONToSend.AddPair('reject_call', TJSONBool.Create(false));
-    JSONToSend.AddPair('groupsIgnore', TJSONBool.Create(true));
-    JSONToSend.AddPair('alwaysOnline', TJSONBool.Create(false));
-    JSONToSend.AddPair('readMessages', TJSONBool.Create(false));
-    JSONToSend.AddPair('readStatus', TJSONBool.Create(false));
-    JSONToSend.AddPair('syncFullHistory', TJSONBool.Create(false));
+    JSONToSend.AddPair('reject_call', VariantToJSON(false));
+    JSONToSend.AddPair('groupsIgnore', VariantToJSON(true));
+    JSONToSend.AddPair('alwaysOnline', VariantToJSON(false));
+    JSONToSend.AddPair('readMessages', VariantToJSON(false));
+    JSONToSend.AddPair('readStatus', VariantToJSON(false));
+    JSONToSend.AddPair('syncFullHistory', VariantToJSON(false));
 
     if (UrlTypebot <> '') and (NomeTypeBot <> '') then
     begin
