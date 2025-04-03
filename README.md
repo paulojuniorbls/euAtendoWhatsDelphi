@@ -16,6 +16,6 @@ Internet: Conexão ativa para integração com as APIs do EuAtendo.
 
 📚 Documentação
 Para a documentação completa, visite documentação oficial. [https://doc.apicomponente.com.br](https://url.apidevs.app/doc)
-
+*As Chaves do servidores estão em constante mudança, sempre copia da documentação a chave disponivel ao testar o DEMO*
 📝 Licença
 Este projeto é licenciado sob a Licença MIT.
