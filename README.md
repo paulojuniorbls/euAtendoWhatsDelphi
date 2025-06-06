@@ -2,6 +2,7 @@
 
 **ApiEuAtendo1** é um componente Delphi para integração com a API EuAtendo, oferecendo suporte ao atendimento automatizado e centralizado via WhatsApp, Instagram e Facebook.
 
+
 ## Recursos Principais
 
 ### Gerenciamento de Instâncias
@@ -35,12 +36,13 @@
 - Obter foto de perfil
 
 ### Chamadas
-- Realizar chamadas
+- Realizar chamadas (Descontinuado)
 - Configurar rejeição automática de chamadas
 
 ### Integração com Typebot
 - Configurar fluxos de conversação automática
 - Personalizar mensagens e comportamentos
+
 
 🛠 Pré-requisitos
 Delphi: Versão 10 ou superior.
