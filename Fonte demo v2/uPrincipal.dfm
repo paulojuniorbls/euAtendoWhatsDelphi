@@ -89,6 +89,7 @@ object Form9: TForm9
     Top = 65
     Width = 248
     Height = 23
+    PasswordChar = '*'
     TabOrder = 1
     Text = 'B1E77E3C8E6C-4C8A-A7BA-31F37FBEC33B'
     OnExit = edtSenhaExit
@@ -120,7 +121,7 @@ object Form9: TForm9
   end
   object DBGrid1: TDBGrid
     Left = 24
-    Top = 424
+    Top = 430
     Width = 612
     Height = 216
     DataSource = DataSource1
@@ -138,7 +139,7 @@ object Form9: TForm9
     Top = 102
     Width = 612
     Height = 307
-    ActivePage = TabSheet2
+    ActivePage = TabSheet7
     TabOrder = 6
     object TabSheet7: TTabSheet
       Caption = 'Configuracoes'
@@ -184,8 +185,9 @@ object Form9: TForm9
         Top = 112
         Width = 249
         Height = 23
+        PasswordChar = '*'
         TabOrder = 0
-        Text = '9bb2b5203266a594dfbe41597c7ff0f2'
+        Text = '9bb2b5203266a594dfbe41597c7ff0f24'
         OnExit = edtApiGlobalExit
       end
       object edtUrl: TEdit
@@ -194,7 +196,7 @@ object Form9: TForm9
         Width = 249
         Height = 23
         TabOrder = 1
-        Text = 'https://demo1.apieuatendo.com.br'
+        Text = 'https://euatendov1.apieuatendo.com.br'
         OnExit = edtUrlExit
       end
       object cbVersao: TComboBox

@@ -720,7 +720,7 @@ begin
 if cbVersao.ItemIndex = 0 then
    begin
    ApiEuAtendo1.VersionAPI := TVersionOption.V1;
-   edtApiGlobal.Text := '9bb2b5203266a594dfbe41597c7ff0f2';
+   edtApiGlobal.Text := '9bb2b5203266a594dfbe41597c7ff0f24';
    edtUrl.Text := 'https://demo1.apieuatendo.com.br';
 
    ApiEuAtendo1.EvolutionApiURL := edtUrl.text;
@@ -729,7 +729,7 @@ if cbVersao.ItemIndex = 0 then
    end
    else
    begin
-   edtApiGlobal.Text := '731c573a3b28f00380b9e4306599bf73';
+   edtApiGlobal.Text := '731c573a3b28f00380b9e4306599bf734';
    edtUrl.Text := 'https://demo2.apieuatendo.com.br';
    ApiEuAtendo1.VersionAPI := TVersionOption.V2 ;
    ApiEuAtendo1.EvolutionApiURL := edtUrl.text;
@@ -900,9 +900,10 @@ begin
                   TPair<string, string>.Create('valor', '59,90')
                 ];
 
-  Resposta := ApiEuAtendo1.ChamarFluxoTypebot(edtNumeroContato.Text, 'acao-componente-07f0x1f', Variaveis, True);
+//  Resposta := ApiEuAtendo1.ChamarFluxoTypebot(edtNumeroContato.Text, 'acao-componente-07f0x1f', Variaveis, True);
+  Resposta := ApiEuAtendo1.ChamarFluxoTypebot(edtNumeroContato.Text, 'pesquisa-satisfacao-venda-wt014vp', Variaveis, True);
 
-  ApiEuAtendo1.EnviarMensagemDeTexto('559982385000','testei o envio de fluxo');
+ // ApiEuAtendo1.EnviarMensagemDeTexto('559982385000','testei o envio de fluxo');
 
 end;
 
