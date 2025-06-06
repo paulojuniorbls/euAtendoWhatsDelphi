@@ -455,6 +455,7 @@ begin
       Resultado := Resultado + ATexto[I];
   end;
   Result := Resultado;
+
 end;
 
 procedure TApiEuAtendo.obterInstancias;
@@ -1729,7 +1730,6 @@ var
 begin
   Result := ''; // Assume failure by default
 
-  if FVersion = TVersionOption.V1 then
   begin
     HTTP := TIdHTTP.Create(nil);
     SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
@@ -1775,7 +1775,7 @@ begin
       SSL.Free;
       HTTP.Free;
     end;
-  end;
+end;
 end;
 
 
@@ -2461,15 +2461,6 @@ begin
         HTTP.Free;
       end;
    end;
-
-
-
-
-
-
-
-
-
 end;
 
 
