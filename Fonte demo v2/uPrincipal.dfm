@@ -196,7 +196,7 @@ object Form9: TForm9
         Width = 249
         Height = 23
         TabOrder = 1
-        Text = 'https://euatendov1.apieuatendo.com.br'
+        Text = 'https://demo1.apieuatendo.com.br'
         OnExit = edtUrlExit
       end
       object cbVersao: TComboBox
@@ -619,8 +619,8 @@ object Form9: TForm9
     DDDPadrao = '99'
     OnObterGrupos = ApiEuAtendo1ObterGrupos
     OnObterFotoPerfil = ApiEuAtendo1ObterFotoPerfil
-    GlobalAPI = 'ASD3F21APIDEVS6A5SPAULOJRDEVFA1'
-    EvolutionApiURL = 'https://apiv1demo.apicomponente.com.br'
+    GlobalAPI = '9bb2b5203266a594dfbe41597c7ff0f24'
+    EvolutionApiURL = 'https://demo1.apieuatendo.com.br'
     OnStatusInstancia = ApiEuAtendo1StatusInstancia
     OnCriarInstancia = ApiEuAtendo1CriarInstancia
     OnObterQrCode = ApiEuAtendo1ObterQrCode
