@@ -2,13 +2,45 @@
 
 **ApiEuAtendo1** é um componente Delphi para integração com a API EuAtendo, oferecendo suporte ao atendimento automatizado e centralizado via WhatsApp, Instagram e Facebook.
 
-## 📋 Principais Funcionalidades
-- **Envio de Mensagens**: Envie mensagens de texto e arquivos diretamente pelo WhatsApp.
-- **Envio de fluxos interativos** Envie um fluxo onde á interação com o cliente através de perguntas e respostas.
-- **Atendimento Multicanal**: Integração com Instagram e Facebook para uma experiência de atendimento completa.
-- **Respostas Automáticas**: Utilize respostas rápidas e fluxos automatizados para melhorar a eficiência.
-- **Relatórios e Monitoramento**: Acompanhe estatísticas de uso e desempenho.
-- **Integração com CRM e Outras Plataformas**: Centralize o atendimento com integrações avançadas.
+## Recursos Principais
+
+### Gerenciamento de Instâncias
+- Criar instância
+- Deletar instância
+- Deslogar instância
+- Reiniciar instância
+- Obter status da instância
+- Obter QR Code para conexão
+- Listar todas as instâncias
+
+### Mensagens
+- Enviar mensagens de texto
+- Enviar mensagens de mídia (imagens, documentos, áudio)
+- Enviar localização
+- Envio de fluxos interativos Envie um fluxo onde á interação com o cliente através de perguntas e respostas.
+- Enviar listas
+- Verificar status de mensagens
+- Suporte a menções em grupos
+
+### Grupos
+- Obter lista de grupos
+- Obter membros de grupos
+- Enviar mensagens para grupos
+- Mencionar todos os membros (ghost mention)
+
+### Contatos
+- Obter lista de contatos
+- Verificar existência de números no WhatsApp
+- Obter dados de contato específico
+- Obter foto de perfil
+
+### Chamadas
+- Realizar chamadas
+- Configurar rejeição automática de chamadas
+
+### Integração com Typebot
+- Configurar fluxos de conversação automática
+- Personalizar mensagens e comportamentos
 
 🛠 Pré-requisitos
 Delphi: Versão 10 ou superior.
