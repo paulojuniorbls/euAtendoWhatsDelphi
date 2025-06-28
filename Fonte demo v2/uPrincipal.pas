@@ -91,6 +91,10 @@ type
     Button24: TButton;
     Button25: TButton;
     Button26: TButton;
+    BtPesquisaSatisfacao: TButton;
+    btnObterEtiquetas: TButton;
+    btnAddEtiqueta: TButton;
+    btnRemoveEtiqueta: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure ApiEuAtendo1ObterQrCode(Sender: TObject;
@@ -141,6 +145,12 @@ type
     procedure Button24Click(Sender: TObject);
     procedure Button25Click(Sender: TObject);
     procedure Button26Click(Sender: TObject);
+    procedure BtPesquisaSatisfacaoClick(Sender: TObject);
+    procedure ApiEuAtendo1ObterEtiquetas(Sender: TObject;
+      const Etiquetas: TEtiquetas);
+    procedure btnObterEtiquetasClick(Sender: TObject);
+    procedure btnAddEtiquetaClick(Sender: TObject);
+    procedure btnRemoveEtiquetaClick(Sender: TObject);
   private
     procedure ApplyBestFit(Grid: TDBGrid);
     function SaveImageFromURLToDisk(const ImageURL, NumeroContato
@@ -197,6 +207,44 @@ begin
     ClientDataSet1.Post;
   end;
 
+  ApplyBestFit(DBGrid1);
+end;
+
+procedure TForm9.ApiEuAtendo1ObterEtiquetas(Sender: TObject;
+  const Etiquetas: TEtiquetas);
+var
+  I: Integer;
+begin
+  // A lógica para limpar e preparar o ClientDataSet é a mesma
+  if ClientDataSet1.Active then
+  begin
+    ClientDataSet1.Close;
+    ClientDataSet1.FieldDefs.Clear;
+    ClientDataSet1.Fields.Clear;
+  end;
+
+  // 1. Definindo os campos para as etiquetas (ao invés de contatos)
+  ClientDataSet1.FieldDefs.Add('ID', ftString, 50);
+  ClientDataSet1.FieldDefs.Add('Nome', ftString, 100);
+  ClientDataSet1.FieldDefs.Add('Cor', ftString, 50);
+  ClientDataSet1.FieldDefs.Add('IDPredefinido', ftString, 50);
+
+  ClientDataSet1.CreateDataSet;
+  ClientDataSet1.EmptyDataSet;
+
+  // 2. Loop para percorrer o array de Etiquetas
+  for I := 0 to Length(Etiquetas) - 1 do
+  begin
+    ClientDataSet1.Append;
+    // 3. Preenchendo os campos com os dados da etiqueta
+    ClientDataSet1.FieldByName('ID').AsString := Etiquetas[I].ID;
+    ClientDataSet1.FieldByName('Nome').AsString := Etiquetas[I].Name;
+    ClientDataSet1.FieldByName('Cor').AsString := Etiquetas[I].Color;
+    ClientDataSet1.FieldByName('IDPredefinido').AsString := Etiquetas[I].PredefinedId;
+    ClientDataSet1.Post;
+  end;
+
+  // A sua função para ajustar a grade continua a mesma
   ApplyBestFit(DBGrid1);
 end;
 
@@ -327,6 +375,11 @@ begin
       ShowMessage('Erro inesperado: ' + E.Message);
     end;
   end;
+end;
+
+procedure TForm9.BtPesquisaSatisfacaoClick(Sender: TObject);
+begin
+ //show
 end;
 
 procedure TForm9.Button10Click(Sender: TObject);
@@ -715,6 +768,24 @@ begin
   edtIDMensagem.Text := ApiEuAtendo1.FazerLigacao(edtNumeroContato.Text, 5);
 end;
 
+procedure TForm9.btnAddEtiquetaClick(Sender: TObject);
+begin
+if ApiEuAtendo1.AdicionarEtiquetaAoContato('559982385000','7') then
+     Showmessage('Adicionado com sucesso')
+end;
+
+procedure TForm9.btnObterEtiquetasClick(Sender: TObject);
+begin
+ApiEuAtendo1.ObterEtiquetas;
+end;
+
+procedure TForm9.btnRemoveEtiquetaClick(Sender: TObject);
+begin
+if ApiEuAtendo1.RemoverEtiquetaAoContato('559982385000','7') then
+     Showmessage('Removida com sucesso')
+
+end;
+
 procedure TForm9.cbVersaoChange(Sender: TObject);
 begin
 if cbVersao.ItemIndex = 0 then
@@ -906,6 +977,7 @@ begin
  // ApiEuAtendo1.EnviarMensagemDeTexto('559982385000','testei o envio de fluxo');
 
 end;
+
 
 procedure TForm9.Button20Click(Sender: TObject);
 var

@@ -138,8 +138,8 @@ object Form9: TForm9
     Left = 24
     Top = 102
     Width = 612
-    Height = 307
-    ActivePage = TabSheet7
+    Height = 322
+    ActivePage = TabSheet2
     TabOrder = 6
     object TabSheet7: TTabSheet
       Caption = 'Configuracoes'
@@ -323,27 +323,36 @@ object Form9: TForm9
         Text = 'status'
         OnChange = edtStatusChange
       end
+      object btnObterEtiquetas: TButton
+        Left = 7
+        Top = 85
+        Width = 282
+        Height = 25
+        Caption = 'Obter etiquetas(WhatsBusiness) V2'
+        TabOrder = 9
+        OnClick = btnObterEtiquetasClick
+      end
     end
     object TabSheet2: TTabSheet
       Caption = 'Envio'
       ImageIndex = 1
       object Label8: TLabel
         Left = 315
-        Top = 19
+        Top = 91
         Width = 161
         Height = 15
         Caption = 'Codigo da mensagem enviada'
       end
       object Label5: TLabel
         Left = 315
-        Top = 83
+        Top = 147
         Width = 103
         Height = 15
         Caption = 'Mensagem a enviar'
       end
       object Button3: TButton
         Left = 17
-        Top = 25
+        Top = 1
         Width = 282
         Height = 25
         Caption = 'enviar texto'
@@ -352,7 +361,7 @@ object Form9: TForm9
       end
       object Button5: TButton
         Left = 17
-        Top = 56
+        Top = 32
         Width = 282
         Height = 25
         Caption = 'enviar arquivo'
@@ -361,7 +370,7 @@ object Form9: TForm9
       end
       object Button10: TButton
         Left = 17
-        Top = 180
+        Top = 156
         Width = 282
         Height = 25
         Caption = 'Status da mensagem'
@@ -370,7 +379,7 @@ object Form9: TForm9
       end
       object Button18: TButton
         Left = 17
-        Top = 118
+        Top = 94
         Width = 282
         Height = 25
         Caption = 'Enviar base64'
@@ -379,7 +388,7 @@ object Form9: TForm9
       end
       object btEnviaLista: TButton
         Left = 17
-        Top = 87
+        Top = 63
         Width = 282
         Height = 25
         Caption = 'Enviar lista'
@@ -388,7 +397,7 @@ object Form9: TForm9
       end
       object Button23: TButton
         Left = 17
-        Top = 149
+        Top = 125
         Width = 282
         Height = 25
         Caption = 'Envia os 3 botoes juntos'
@@ -397,14 +406,14 @@ object Form9: TForm9
       end
       object edtIDMensagem: TEdit
         Left = 315
-        Top = 40
+        Top = 112
         Width = 278
         Height = 23
         TabOrder = 6
       end
       object memoMensagemEnviar: TMemo
         Left = 315
-        Top = 104
+        Top = 168
         Width = 278
         Height = 105
         Lines.Strings = (
@@ -418,7 +427,7 @@ object Form9: TForm9
       end
       object Button24: TButton
         Left = 17
-        Top = 211
+        Top = 187
         Width = 282
         Height = 25
         Caption = 'Enviar localiza'#231#227'o'
@@ -427,12 +436,39 @@ object Form9: TForm9
       end
       object Button26: TButton
         Left = 17
-        Top = 242
+        Top = 218
         Width = 282
         Height = 25
         Caption = 'Enviar fluxo typebot'
         TabOrder = 9
         OnClick = Button26Click
+      end
+      object BtPesquisaSatisfacao: TButton
+        Left = 17
+        Top = 249
+        Width = 282
+        Height = 25
+        Caption = 'Enviar Pesquisa de satisfacao'
+        TabOrder = 10
+        OnClick = BtPesquisaSatisfacaoClick
+      end
+      object btnAddEtiqueta: TButton
+        Left = 315
+        Top = 1
+        Width = 278
+        Height = 25
+        Caption = 'Adcionar etiqueta ao contato'
+        TabOrder = 11
+        OnClick = btnAddEtiquetaClick
+      end
+      object btnRemoveEtiqueta: TButton
+        Left = 315
+        Top = 32
+        Width = 278
+        Height = 25
+        Caption = 'Remover etiqueta do contato'
+        TabOrder = 12
+        OnClick = btnRemoveEtiquetaClick
       end
     end
     object TabSheet3: TTabSheet
@@ -613,6 +649,7 @@ object Form9: TForm9
     end
   end
   object ApiEuAtendo1: TApiEuAtendo
+    OnObterEtiquetas = ApiEuAtendo1ObterEtiquetas
     OnObterInstancias = ApiEuAtendo1ObterInstancias
     OnObterContatos = ApiEuAtendo1ObterContatos
     CodigoPais = '55'
