@@ -14,17 +14,16 @@ uses
   System.NetEncoding, IdSSLOpenSSL, IdCoderMIME, VCL.Graphics ,Vcl.ExtCtrls, VCL.Imaging.jpeg
   //baixar imagem disco
   ,System.Net.HttpClientComponent,System.Net.HttpClient
-  ,System.Generics.Collections,Vcl.Imaging.pngimage
-  ;
+  ,System.Generics.Collections,Vcl.Imaging.pngimage;
 
   type
   TVersionOption = (V1, V2, Unknown); // Enum com as versões disponíveis
 
-type
-  TInstanceStatus = record
-    InstanceName: string;
-    State: string;
-  end;
+  type
+    TInstanceStatus = record
+      InstanceName: string;
+      State: string;
+    end;
 
   TButtonTipo = record
     Tipo: string; // Pode ser 'reply', 'copy', 'url' ou 'call'
@@ -83,17 +82,17 @@ type
   ChatCount: Integer;
 end;
 
-TInstanceSettings = record
-  RejectCall: Boolean;
-  MsgCall: string;
-  GroupsIgnore: Boolean;
-  AlwaysOnline: Boolean;
-  ReadMessages: Boolean;
-  ReadStatus: Boolean;
-  SyncFullHistory: Boolean;
-  CreatedAt: string;
-  UpdatedAt: string;
-end;
+  TInstanceSettings = record
+    RejectCall: Boolean;
+    MsgCall: string;
+    GroupsIgnore: Boolean;
+    AlwaysOnline: Boolean;
+    ReadMessages: Boolean;
+    ReadStatus: Boolean;
+    SyncFullHistory: Boolean;
+    CreatedAt: string;
+    UpdatedAt: string;
+  end;
 
   type
   TInstanceDetail = record
@@ -118,15 +117,25 @@ end;
   end;
   TInstances = array of TInstanceDetail;
 
- TGrupos = array of TGrupo;
+ TGrupos   = array of TGrupo;
  TContatos = array of TContato;
 
   type
-    TFotoPerfilResponse = record
-        WUID: string;
-        ProfilePictureURL: string;
-        Filepath:String;
-    end;
+  TFotoPerfilResponse = record
+      WUID: string;
+      ProfilePictureURL: string;
+      Filepath:String;
+  end;
+
+  // lidar com as etiquetas do WhatsBusiness
+  TEtiqueta = record
+    ID: string;
+    Name: string;
+    Color: string;
+    PredefinedId: string;
+  end;
+  TEtiquetas = array of TEtiqueta;
+  TOnObterEtiquetas = procedure(Sender: TObject; const Etiquetas: TEtiquetas) of object;
 
   type
   TOnObterGrupos = procedure(Sender: TObject; const Grupos: TGrupos) of object;
@@ -164,6 +173,7 @@ end;
     FTypeBotMensagemNaoEntendeu:String;
     FOnObterInstancias: TOnObterInstancias;
     FOnObterContatos: TOnObterContatos;
+    FOnObterEtiquetas: TOnObterEtiquetas;
     procedure DecodeBase64Stream(Input, Output: TStream);
     function  DetectFileType(const filePath: string): string;
     procedure DoObterFotoPerfil(const FotoPerfilResponse: TFotoPerfilResponse);
@@ -173,19 +183,25 @@ end;
     function GetVersion: TVersionOption;
     procedure SetVersion(const Value: TVersionOption);
     function GetMimeTypeByExtension(const FileName: string): string;
+    function ManipularEtiquetaDoContato(const NumeroContato, LabelID, Action: string): Boolean;
+
   protected
     procedure DoStatusInstancia(const InstanceStatus: TInstanceStatus);
     procedure DoCriarInstancia(const InstanceResponse: TInstanceResponse);
     procedure DoObterQrCode(const Base64QRCode: string);
     procedure DoObterContatos(const Contatos: TContatos);
     function GetVersao: string;
+    procedure DoObterEtiquetas(const Etiquetas: TEtiquetas);
   public
+  procedure ObterEtiquetas; // etiquetas novo recurso
+  function AdicionarEtiquetaAoContato(const NumeroContato, LabelID: string): Boolean;
+  function RemoverEtiquetaAoContato(const NumeroContato, LabelID: string): Boolean;
   function ChamarFluxoTypebot(RemoteJid, TypebotName: string;
       Variaveis: TArray<TPair<string, string>>; StartSession: Boolean): string;
   function ObterVersaoServidor: string;
   function EnviarLocalizacao(NumeroTelefone, Nome, Endereco: string; Latitude,
       Longitude: Double): string;
-    procedure LoadBase64ToImage(const Base64: string; Image: TImage);
+    procedure LoadBase64ToImage(const Base64: string;Image: TImage);
   function FazerLigacao(NumeroTelefone: String; Duracao: integer): String;
    procedure EnviarBotao(NumeroDestinatario, TituloBotao, DescricaoBotao,thumburl,
       RodapeBotao: string; const Botoes: array of TButtonTipo);
@@ -218,6 +234,7 @@ end;
     procedure ObterGrupos;
     constructor Create(AOwner: TComponent);
   published
+    property OnObterEtiquetas: TOnObterEtiquetas read FOnObterEtiquetas write FOnObterEtiquetas; // <-- RENOMEADO
     property VersionAPI: TVersionOption read GetVersion write SetVersion default V1;
     property VersaoComponente: string read GetVersao;
     property ProxyHost: String read FProxyHost write FProxyHost;
@@ -261,6 +278,140 @@ end;
 function TApiEuAtendo.GetVersao: string;
 begin
   Result := VERSAO_COMPONENTE;
+end;
+               //novo recurso de etiquetas
+function TApiEuAtendo.ManipularEtiquetaDoContato(const NumeroContato, LabelID, Action: string): Boolean;
+var
+  HTTP: TIdHTTP;
+  SSL: TIdSSLIOHandlerSocketOpenSSL;
+  JSONToSend: TJSONObject;
+  PostDataStream: TStringStream;
+  ResponseStr: string;
+  NumeroFormatado: string;
+begin
+  Result := False; // Assume falha por padrão
+  HTTP := TIdHTTP.Create(nil);
+  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  JSONToSend := TJSONObject.Create;
+  try // Bloco externo para garantir a liberação dos recursos
+    try // Bloco interno para tratar as exceções da operação
+      // Configurações de SSL e Cabeçalho
+      SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+      HTTP.IOHandler := SSL;
+      HTTP.Request.ContentType := 'application/json';
+      HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+
+      // Formata o número de telefone
+      NumeroFormatado := SoNumeros(NumeroContato);
+
+      // Cria o corpo (body) da requisição em JSON
+      JSONToSend.AddPair('number', NumeroFormatado);
+      JSONToSend.AddPair('labelId', LabelID);
+      JSONToSend.AddPair('action', Action); // 'add' ou 'remove'
+
+      PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+      try
+        // Envia a requisição POST
+        ResponseStr := HTTP.Post(FEvolutionApiURL + '/label/handleLabel/' + FNomeInstancia, PostDataStream);
+        // A API retorna código 200 em caso de sucesso
+        if HTTP.ResponseCode = 200 then
+          Result := True;
+      finally
+        PostDataStream.Free;
+      end;
+    except
+      on E: Exception do
+        Result := False; // Em caso de qualquer erro, retorna falha
+    end;
+  finally // Este finally corresponde ao try externo
+    JSONToSend.Free;
+    SSL.Free;
+    HTTP.Free;
+  end;
+end;
+
+// Implementação da função pública para Adicionar
+function TApiEuAtendo.AdicionarEtiquetaAoContato(const NumeroContato, LabelID: string): Boolean;
+begin
+  Result := ManipularEtiquetaDoContato(NumeroContato, LabelID, 'add');
+end;
+
+// Implementação da função pública para Remover
+function TApiEuAtendo.RemoverEtiquetaAoContato(const NumeroContato, LabelID: string): Boolean;
+begin
+  Result := ManipularEtiquetaDoContato(NumeroContato, LabelID, 'remove');
+end;
+
+procedure TApiEuAtendo.DoObterEtiquetas(const Etiquetas: TEtiquetas);
+begin
+  if Assigned(FOnObterEtiquetas) then
+    FOnObterEtiquetas(Self, Etiquetas);
+end;
+
+procedure TApiEuAtendo.ObterEtiquetas;
+var
+  t: TThread;
+begin
+  t := TThread.CreateAnonymousThread(procedure
+  var
+    HTTP: TIdHTTP;
+    SSL: TIdSSLIOHandlerSocketOpenSSL;
+    ResponseStr: string;
+    EtiquetasResult: TEtiquetas;
+    JSONArray: TJSONArray;
+    JSONEtiqueta: TJSONObject;
+    Value: TJSONValue;
+    I: Integer;
+  begin
+    HTTP := TIdHTTP.Create(nil);
+    SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+    try
+      SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+      HTTP.IOHandler := SSL;
+      HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+
+      try
+        ResponseStr := HTTP.Get(FEvolutionApiURL + '/label/findLabels/' + FNomeInstancia);
+        JSONArray := TJSONObject.ParseJSONValue(ResponseStr) as TJSONArray;
+        try
+          SetLength(EtiquetasResult, JSONArray.Count);
+          for I := 0 to JSONArray.Count - 1 do
+          begin
+            JSONEtiqueta := JSONArray.Items[I] as TJSONObject;
+
+            if JSONEtiqueta.TryGetValue('id', Value) and not Value.Null then
+              EtiquetasResult[I].ID := Value.Value;
+
+            if JSONEtiqueta.TryGetValue('name', Value) and not Value.Null then
+              EtiquetasResult[I].Name := Value.Value;
+
+            if JSONEtiqueta.TryGetValue('color', Value) and not Value.Null then
+              EtiquetasResult[I].Color := Value.Value;
+
+            if JSONEtiqueta.TryGetValue('predefinedId', Value) and not Value.Null then
+              EtiquetasResult[I].PredefinedId := Value.Value
+            else
+              EtiquetasResult[I].PredefinedId := '';
+          end;
+
+          TThread.Queue(nil,
+            procedure
+            begin
+              DoObterEtiquetas(EtiquetasResult);
+            end);
+        finally
+          JSONArray.Free;
+        end;
+      except
+        on E: Exception do
+          // Tratamento de erro
+      end;
+    finally
+      SSL.Free;
+      HTTP.Free;
+    end;
+  end);
+  t.Start;
 end;
 
 procedure TApiEuAtendo.SetVersion(const Value: TVersionOption);
@@ -1414,7 +1565,7 @@ begin
   end;
 end;
 
-procedure TApiEuAtendo.LoadBase64ToImage(const Base64: string; Image: TImage);
+procedure TApiEuAtendo.LoadBase64ToImage(const Base64: string;Image: TImage);
 var
   CleanedBase64: string;
   Input: TStringStream;
@@ -1730,6 +1881,7 @@ var
 begin
   Result := ''; // Assume failure by default
 
+//if FVersion = TVersionOption.V1 then
   begin
     HTTP := TIdHTTP.Create(nil);
     SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
@@ -1775,7 +1927,7 @@ begin
       SSL.Free;
       HTTP.Free;
     end;
-end;
+  end;
 end;
 
 
