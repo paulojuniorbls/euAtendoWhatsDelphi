@@ -717,7 +717,7 @@ begin
 
   if FileOpenDialog1.Execute then
   begin
-     // O envio do audio gravado deve ser no formato OGG, assim o Whats vai entender como um aduio gravado na hr,
+     // O envio do audio gravado deve ser no formato OGG, assim o Whats vai entender como um audio gravado na hr,
      //vai aplicar transcrição, mostrar o gravando, tudo certinho, recomendo, voce gravar um audio, e baixar ele via PC assim voce tem um audio ORIGINAL para enviar e testar.
     edtIDMensagem.Text := ApiEuAtendo1.EnviarAudioGravado(edtNumeroContato.Text,FileOpenDialog1.FileName,15000);
   end;
