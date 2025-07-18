@@ -184,7 +184,6 @@ end;
     procedure SetVersion(const Value: TVersionOption);
     function GetMimeTypeByExtension(const FileName: string): string;
     function ManipularEtiquetaDoContato(const NumeroContato, LabelID, Action: string): Boolean;
-
   protected
     procedure DoStatusInstancia(const InstanceStatus: TInstanceStatus);
     procedure DoCriarInstancia(const InstanceResponse: TInstanceResponse);
@@ -193,6 +192,7 @@ end;
     function GetVersao: string;
     procedure DoObterEtiquetas(const Etiquetas: TEtiquetas);
   public
+  function EnviarAudioGravado(NumeroTelefone, caminho_arquivo: string; duracaoGravacao: Integer = 0): string;
   procedure ObterEtiquetas; // etiquetas novo recurso
   function AdicionarEtiquetaAoContato(const NumeroContato, LabelID: string): Boolean;
   function RemoverEtiquetaAoContato(const NumeroContato, LabelID: string): Boolean;
@@ -889,6 +889,8 @@ var
     SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
     HTTP.IOHandler := SSL;
     HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+    HTTP.ConnectTimeout := 30000;
+    HTTP.ReadTimeout := 1200000;
 
     try
      ResponseStr := HTTP.Get(FEvolutionApiURL + '/group/fetchAllGroups/' + FNomeInstancia + '?getParticipants=false');
@@ -1370,6 +1372,69 @@ begin
     MimeTypes.Free;
   end;
 end;
+
+function TApiEuAtendo.EnviarAudioGravado(NumeroTelefone, caminho_arquivo: string; duracaoGravacao: Integer = 0): string;
+var
+  HTTP: TIdHTTP;
+  SSL: TIdSSLIOHandlerSocketOpenSSL;
+  JSONToSend: TJSONObject;
+  PostDataStream: TStringStream;
+  Response: string;
+  Base64Str: string;
+  ResponseJSON, KeyJSON: TJSONObject;
+begin
+  Result := ''; // Assumir falha por padrão
+
+  if FVersion = TVersionOption.V2 then
+  begin
+    NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+    HTTP := TIdHTTP.Create(nil);
+    SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+
+    try
+      SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+      HTTP.IOHandler := SSL;
+      HTTP.Request.ContentType := 'application/json';
+      HTTP.Request.CustomHeaders.Clear;
+      HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+
+      Base64Str := FileToBase64(caminho_arquivo);
+
+      JSONToSend := TJSONObject.Create;
+      try
+        JSONToSend.AddPair('number', NumeroTelefone);
+        JSONToSend.AddPair('audio', Base64Str);
+
+        if duracaoGravacao > 0 then
+          JSONToSend.AddPair('delay', TJSONNumber.Create(duracaoGravacao));
+
+        PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+        try
+          Response := HTTP.Post(FEvolutionApiURL + '/message/sendWhatsAppAudio/' + FNomeInstancia, PostDataStream);
+
+          ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+          try
+            if Assigned(ResponseJSON) and ResponseJSON.TryGetValue('key', KeyJSON) then
+            begin
+              Result := KeyJSON.GetValue<string>('id');
+            end;
+          finally
+            ResponseJSON.Free;
+          end;
+        finally
+          PostDataStream.Free;
+        end;
+      finally
+        JSONToSend.Free;
+      end;
+    finally
+      SSL.Free;
+      HTTP.Free;
+    end;
+  end;
+end;
+
+
 
 function TApiEuAtendo.EnviarMensagemDeMidia(NumeroTelefone, Mensagem, MediaCaption, caminho_arquivo: string): string;
 var
@@ -2627,26 +2692,45 @@ var
 begin
   HTTP := TIdHTTP.Create(nil);
   SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  FillChar(StatusData, SizeOf(StatusData), 0); // Limpa estrutura
   try
-    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-    HTTP.IOHandler := SSL;
-    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
-    ResponseStr := HTTP.Get(FEvolutionApiURL + '/instance/connectionState/' + FNomeInstancia);
-    ResponseJSON := TJSONObject.ParseJSONValue(ResponseStr) as TJSONObject;
     try
-      InstanceJSON := ResponseJSON.GetValue<TJSONObject>('instance');
-      StatusData.InstanceName := InstanceJSON.GetValue<string>('instanceName');
-      StatusData.State := InstanceJSON.GetValue<string>('state');
-      DoStatusInstancia(StatusData);
-    finally
-      ResponseJSON.Free;
+      SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+      HTTP.IOHandler := SSL;
+      HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+
+      ResponseStr := HTTP.Get(FEvolutionApiURL + '/instance/connectionState/' + FNomeInstancia);
+      ResponseJSON := TJSONObject.ParseJSONValue(ResponseStr) as TJSONObject;
+      try
+        InstanceJSON := ResponseJSON.GetValue<TJSONObject>('instance');
+        StatusData.InstanceName := InstanceJSON.GetValue<string>('instanceName');
+        StatusData.State := InstanceJSON.GetValue<string>('state');
+      finally
+        ResponseJSON.Free;
+      end;
+    except
+      on E: EIdHTTPProtocolException do
+      begin
+        StatusData.InstanceName := FNomeInstancia;
+        StatusData.State := Format('Erro HTTP %d: %s', [E.ErrorCode, E.Message]);
+      end;
+      on E: Exception do
+      begin
+        StatusData.InstanceName := FNomeInstancia;
+        StatusData.State := 'Erro: ' + E.Message;
+      end;
     end;
+
+    // Garante que o evento seja disparado sempre
+    DoStatusInstancia(StatusData);
+
   finally
     SSL.Free;
     HTTP.Free;
   end;
   Result := StatusData;
 end;
+
 
 procedure TApiEuAtendo.ObterQrCode();
 var
