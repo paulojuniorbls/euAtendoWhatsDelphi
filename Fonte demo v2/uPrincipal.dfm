@@ -470,6 +470,15 @@ object Form9: TForm9
         TabOrder = 12
         OnClick = btnRemoveEtiquetaClick
       end
+      object btAudioGravado: TButton
+        Left = 315
+        Top = 63
+        Width = 278
+        Height = 25
+        Caption = 'Enviar audio gravado'
+        TabOrder = 13
+        OnClick = btAudioGravadoClick
+      end
     end
     object TabSheet3: TTabSheet
       Caption = 'Dados'

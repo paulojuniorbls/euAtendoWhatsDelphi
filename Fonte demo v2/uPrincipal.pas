@@ -95,6 +95,7 @@ type
     btnObterEtiquetas: TButton;
     btnAddEtiqueta: TButton;
     btnRemoveEtiqueta: TButton;
+    btAudioGravado: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure ApiEuAtendo1ObterQrCode(Sender: TObject;
@@ -151,6 +152,7 @@ type
     procedure btnObterEtiquetasClick(Sender: TObject);
     procedure btnAddEtiquetaClick(Sender: TObject);
     procedure btnRemoveEtiquetaClick(Sender: TObject);
+    procedure btAudioGravadoClick(Sender: TObject);
   private
     procedure ApplyBestFit(Grid: TDBGrid);
     function SaveImageFromURLToDisk(const ImageURL, NumeroContato
@@ -347,7 +349,7 @@ end;
 procedure TForm9.ApiEuAtendo1StatusInstancia(Sender: TObject;
   const InstanceStatus: TInstanceStatus);
 begin
-  edtNome.Text := InstanceStatus.InstanceName;
+  edtNome.Text   := InstanceStatus.InstanceName;
   edtStatus.Text := InstanceStatus.State;
 end;
 
@@ -708,6 +710,19 @@ begin
     'Segue link da sua fatura em aberto.',
     'https://s33.apidevs.app/euatendo/10.png',
     'Agradecemos a preferência', Botao);
+end;
+
+procedure TForm9.btAudioGravadoClick(Sender: TObject);
+begin
+
+  if FileOpenDialog1.Execute then
+  begin
+     // O envio do audio gravado deve ser no formato OGG, assim o Whats vai entender como um aduio gravado na hr,
+     //vai aplicar transcrição, mostrar o gravando, tudo certinho, recomendo, voce gravar um audio, e baixar ele via PC assim voce tem um audio ORIGINAL para enviar e testar.
+    edtIDMensagem.Text := ApiEuAtendo1.EnviarAudioGravado(edtNumeroContato.Text,FileOpenDialog1.FileName,15000);
+  end;
+
+
 end;
 
 procedure TForm9.btEnviaListaClick(Sender: TObject);
