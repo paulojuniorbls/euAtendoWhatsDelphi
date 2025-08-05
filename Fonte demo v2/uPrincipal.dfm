@@ -395,21 +395,12 @@ object Form9: TForm9
         TabOrder = 4
         OnClick = btEnviaListaClick
       end
-      object Button23: TButton
-        Left = 17
-        Top = 125
-        Width = 282
-        Height = 25
-        Caption = 'Envia os 3 botoes juntos'
-        TabOrder = 5
-        OnClick = Button23Click
-      end
       object edtIDMensagem: TEdit
         Left = 315
         Top = 112
         Width = 278
         Height = 23
-        TabOrder = 6
+        TabOrder = 5
       end
       object memoMensagemEnviar: TMemo
         Left = 315
@@ -423,7 +414,7 @@ object Form9: TForm9
           '*Pode usar negrito* e qualquer outro comando '
           'nativo '
           'do WhatsApp')
-        TabOrder = 7
+        TabOrder = 6
       end
       object Button24: TButton
         Left = 17
@@ -431,7 +422,7 @@ object Form9: TForm9
         Width = 282
         Height = 25
         Caption = 'Enviar localiza'#231#227'o'
-        TabOrder = 8
+        TabOrder = 7
         OnClick = Button24Click
       end
       object Button26: TButton
@@ -440,7 +431,7 @@ object Form9: TForm9
         Width = 282
         Height = 25
         Caption = 'Enviar fluxo typebot'
-        TabOrder = 9
+        TabOrder = 8
         OnClick = Button26Click
       end
       object BtPesquisaSatisfacao: TButton
@@ -449,7 +440,7 @@ object Form9: TForm9
         Width = 282
         Height = 25
         Caption = 'Enviar Pesquisa de satisfacao'
-        TabOrder = 10
+        TabOrder = 9
         OnClick = BtPesquisaSatisfacaoClick
       end
       object btnAddEtiqueta: TButton
@@ -458,7 +449,7 @@ object Form9: TForm9
         Width = 278
         Height = 25
         Caption = 'Adcionar etiqueta ao contato'
-        TabOrder = 11
+        TabOrder = 10
         OnClick = btnAddEtiquetaClick
       end
       object btnRemoveEtiqueta: TButton
@@ -467,7 +458,7 @@ object Form9: TForm9
         Width = 278
         Height = 25
         Caption = 'Remover etiqueta do contato'
-        TabOrder = 12
+        TabOrder = 11
         OnClick = btnRemoveEtiquetaClick
       end
       object btAudioGravado: TButton
@@ -476,8 +467,17 @@ object Form9: TForm9
         Width = 278
         Height = 25
         Caption = 'Enviar audio gravado'
-        TabOrder = 13
+        TabOrder = 12
         OnClick = btAudioGravadoClick
+      end
+      object btnContato: TButton
+        Left = 17
+        Top = 125
+        Width = 282
+        Height = 25
+        Caption = 'Enviar Contato'
+        TabOrder = 13
+        OnClick = btnContatoClick
       end
     end
     object TabSheet3: TTabSheet
@@ -655,6 +655,30 @@ object Form9: TForm9
         TabOrder = 0
         OnClick = btFakeCallClick
       end
+    end
+  end
+  object Panel1: TPanel
+    Left = 662
+    Top = 505
+    Width = 411
+    Height = 141
+    TabOrder = 7
+    Visible = False
+    object Label17: TLabel
+      Left = 128
+      Top = 12
+      Width = 107
+      Height = 15
+      Caption = 'Deixou de funcionar'
+    end
+    object Button23: TButton
+      Left = 47
+      Top = 33
+      Width = 282
+      Height = 25
+      Caption = 'Envia os 3 botoes juntos'
+      TabOrder = 0
+      OnClick = Button23Click
     end
   end
   object ApiEuAtendo1: TApiEuAtendo

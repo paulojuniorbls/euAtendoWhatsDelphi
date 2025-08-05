@@ -192,6 +192,7 @@ end;
     function GetVersao: string;
     procedure DoObterEtiquetas(const Etiquetas: TEtiquetas);
   public
+  function EnviarContato(const NumeroTelefone: string; const Contatos: TJSONArray): string;
   function EnviarAudioGravado(NumeroTelefone, caminho_arquivo: string; duracaoGravacao: Integer = 0): string;
   procedure ObterEtiquetas; // etiquetas novo recurso
   function AdicionarEtiquetaAoContato(const NumeroContato, LabelID: string): Boolean;
@@ -889,8 +890,8 @@ var
     SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
     HTTP.IOHandler := SSL;
     HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
-    HTTP.ConnectTimeout := 30000;
-    HTTP.ReadTimeout := 1200000;
+    HTTP.ConnectTimeout := 3000000;
+    HTTP.ReadTimeout := 120000000;
 
     try
      ResponseStr := HTTP.Get(FEvolutionApiURL + '/group/fetchAllGroups/' + FNomeInstancia + '?getParticipants=false');
@@ -974,11 +975,14 @@ var
   FormattedNumber, DDD, NumeroFinal: string;
   CountryCodeLength, DDDLength, NumeroLength: Integer;
 begin
+  // Se o número já contém um sufixo de grupo (ex: grupo WhatsApp), retorna como está
+  if Numero.Contains('@g.us') then
+    Exit(Numero);
+
   FormattedNumber := '';
   DDD := FdddPadrao;  // DDD padrão
   CountryCodeLength := Length(FCodigoPais);
   DDDLength := Length(FdddPadrao);
-
 
   // Manter apenas os dígitos numéricos
   for I := 1 to Length(Numero) do
@@ -986,55 +990,55 @@ begin
     if CharInSet(Numero[I], ['0'..'9']) then
       FormattedNumber := FormattedNumber + Numero[I];
   end;
+
   NumeroLength := Length(FormattedNumber);
+
   // Extração de partes do número baseado no comprimento
   case NumeroLength of
     8:
-      NumeroFinal := FormattedNumber; // Somente o número
+      NumeroFinal := FormattedNumber;
     9:
       begin
         if StrToIntDef(DDD, 0) <= 35 then
-          NumeroFinal := FormattedNumber // nono dígito + número
+          NumeroFinal := FormattedNumber
         else
-          NumeroFinal := Copy(FormattedNumber, 2, 8); // Removendo o nono dígito
+          NumeroFinal := Copy(FormattedNumber, 2, 8);
       end;
     10:
       begin
-        // DDD + número
         DDD := Copy(FormattedNumber, 1, 2);
         if StrToIntDef(DDD, 0) >= 35 then
           NumeroFinal := Copy(FormattedNumber, 3, 8)
         else
-          NumeroFinal := '9' + Copy(FormattedNumber, 3, 8); // Adicionando nono dígito
+          NumeroFinal := '9' + Copy(FormattedNumber, 3, 8);
       end;
     11:
       begin
-        // DDD + nono dígito + número
         DDD := Copy(FormattedNumber, 1, 2);
         NumeroFinal := Copy(FormattedNumber, 3, 9);
       end;
     12:
       begin
-        // Código do país + DDD + número
         DDD := Copy(FormattedNumber, 3, 2);
         if StrToIntDef(DDD, 0) >= 35 then
           NumeroFinal := Copy(FormattedNumber, 5, 8)
         else
-          NumeroFinal := '9' + Copy(FormattedNumber, 5, 8); // Adicionando nono dígito
+          NumeroFinal := '9' + Copy(FormattedNumber, 5, 8);
       end;
     13:
       begin
-        // Código do país + DDD + nono dígito + número
         DDD := Copy(FormattedNumber, 3, 2);
         NumeroFinal := Copy(FormattedNumber, 5, 9);
       end;
   end;
+
   // Montar o número final
   if NumeroFinal <> '' then
     Result := FCodigoPais + DDD + NumeroFinal
   else
     Result := FormattedNumber;
 end;
+
 
 function TApiEuAtendo.SaveImageFromURLToDisk(const ImageURL, NumeroContato: string): string;
 var
@@ -1451,7 +1455,7 @@ begin
  if FVersion = TVersionOption.V1 then
    begin
       Result := '';  // Assume failure by default
-      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+      NumeroTelefone := NumeroTelefone; //FormatPhoneNumber(NumeroTelefone);
       HTTP := TIdHTTP.Create(nil);
       SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
       TipoArquivo := DetectFileType(caminho_arquivo);
@@ -1504,7 +1508,7 @@ begin
    if FVersion = TVersionOption.V2 then
    begin
       Result := '';  // Assume failure by default
-      NumeroTelefone := FormatPhoneNumber(NumeroTelefone);
+      NumeroTelefone := NumeroTelefone; //FormatPhoneNumber(NumeroTelefone);
       HTTP := TIdHTTP.Create(nil);
       SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
       TipoArquivo := DetectFileType(caminho_arquivo);
@@ -1933,6 +1937,67 @@ begin
     end;
 
 end;
+
+function TApiEuAtendo.EnviarContato(const NumeroTelefone: string; const Contatos: TJSONArray): string;
+var
+  HTTP: TIdHTTP;
+  SSL: TIdSSLIOHandlerSocketOpenSSL;
+  JSONToSend, OptionsJSON: TJSONObject;
+  PostDataStream: TStringStream;
+  Response: string;
+  ResponseJSON, KeyJSON: TJSONObject;
+  NumeroFormatado: string;
+begin
+  Result := '';  // Assume falha
+
+  if FVersion = TVersionOption.V1 then
+  begin
+    HTTP := TIdHTTP.Create(nil);
+    SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+    NumeroFormatado := FormatPhoneNumber(NumeroTelefone);
+
+    try
+      SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+      HTTP.IOHandler := SSL;
+      HTTP.Request.ContentType := 'application/json';
+      HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+
+      JSONToSend := TJSONObject.Create;
+      try
+        JSONToSend.AddPair('number', NumeroFormatado);
+
+        OptionsJSON := TJSONObject.Create;
+        OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
+        OptionsJSON.AddPair('presence', 'composing');
+        JSONToSend.AddPair('options', OptionsJSON);
+
+        // Adiciona o array de contatos
+        JSONToSend.AddPair('contactMessage', Contatos);
+
+        PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+        try
+          Response := HTTP.Post(FEvolutionApiURL + '/message/sendContact/' + FNomeInstancia, PostDataStream);
+
+          ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
+          try
+            if Assigned(ResponseJSON) and ResponseJSON.TryGetValue('key', KeyJSON) then
+              Result := KeyJSON.GetValue<string>('id');
+          finally
+            ResponseJSON.Free;
+          end;
+        finally
+          PostDataStream.Free;
+        end;
+      finally
+        JSONToSend.Free;
+      end;
+    finally
+      SSL.Free;
+      HTTP.Free;
+    end;
+  end;
+end;
+
 
 function TApiEuAtendo.ChamarFluxoTypebot(RemoteJid, TypebotName: string; Variaveis: TArray<TPair<string, string>>; StartSession: Boolean): string;
 var

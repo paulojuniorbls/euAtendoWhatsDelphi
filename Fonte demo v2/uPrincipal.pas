@@ -50,7 +50,6 @@ type
     Button10: TButton;
     Button18: TButton;
     btEnviaLista: TButton;
-    Button23: TButton;
     TabSheet4: TTabSheet;
     Button6: TButton;
     Button12: TButton;
@@ -96,6 +95,10 @@ type
     btnAddEtiqueta: TButton;
     btnRemoveEtiqueta: TButton;
     btAudioGravado: TButton;
+    Panel1: TPanel;
+    Label17: TLabel;
+    Button23: TButton;
+    btnContato: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure ApiEuAtendo1ObterQrCode(Sender: TObject;
@@ -153,6 +156,7 @@ type
     procedure btnAddEtiquetaClick(Sender: TObject);
     procedure btnRemoveEtiquetaClick(Sender: TObject);
     procedure btAudioGravadoClick(Sender: TObject);
+    procedure btnContatoClick(Sender: TObject);
   private
     procedure ApplyBestFit(Grid: TDBGrid);
     function SaveImageFromURLToDisk(const ImageURL, NumeroContato
@@ -787,6 +791,27 @@ procedure TForm9.btnAddEtiquetaClick(Sender: TObject);
 begin
 if ApiEuAtendo1.AdicionarEtiquetaAoContato('559982385000','7') then
      Showmessage('Adicionado com sucesso')
+end;
+
+procedure TForm9.btnContatoClick(Sender: TObject);
+var
+  Contatos: TJSONArray;
+  Contato1, Contato2: TJSONObject;
+begin
+  Contatos := TJSONArray.Create;
+
+  Contato1 := TJSONObject.Create;
+  Contato1.AddPair('fullName', 'euAtendo');
+  Contato1.AddPair('wuid', '559991046950');
+  Contato1.AddPair('phoneNumber', '+55 99 9 9104-6950');
+  Contato1.AddPair('organization', 'euAtendo sua apiWhats');
+  Contato1.AddPair('email', 'paulojuniorbls@gmail.com');
+  Contato1.AddPair('url', 'https://api.euatendo.app');
+  Contatos.AddElement(Contato1);
+
+  // Envia os contatos
+  edtIDMensagem.text := ApiEuAtendo1.EnviarContato('559982385000', Contatos);
+
 end;
 
 procedure TForm9.btnObterEtiquetasClick(Sender: TObject);
