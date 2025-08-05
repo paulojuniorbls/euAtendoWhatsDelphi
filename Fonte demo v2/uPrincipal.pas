@@ -809,6 +809,15 @@ begin
   Contato1.AddPair('url', 'https://api.euatendo.app');
   Contatos.AddElement(Contato1);
 
+  Contato2 := TJSONObject.Create;
+  Contato2.AddPair('fullName', 'Paulo Junior');
+  Contato2.AddPair('wuid', '559982385000');
+  Contato2.AddPair('phoneNumber', '+55 99  8238-5000');
+  Contato2.AddPair('organization', 'pj dev - euAtendo');
+  Contato2.AddPair('email', 'paulojuniorbls@gmail.com');
+  Contato2.AddPair('url', 'https://api.euatendo.app');
+  Contatos.AddElement(Contato2);
+
   // Envia os contatos
   edtIDMensagem.text := ApiEuAtendo1.EnviarContato('559982385000', Contatos);
 

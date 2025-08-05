@@ -1946,57 +1946,62 @@ var
   PostDataStream: TStringStream;
   Response: string;
   ResponseJSON, KeyJSON: TJSONObject;
-  NumeroFormatado: string;
+  NumeroFormatado, EndPoint: string;
 begin
   Result := '';  // Assume falha
 
-  if FVersion = TVersionOption.V1 then
-  begin
-    HTTP := TIdHTTP.Create(nil);
-    SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-    NumeroFormatado := FormatPhoneNumber(NumeroTelefone);
+  HTTP := TIdHTTP.Create(nil);
+  SSL := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  NumeroFormatado := FormatPhoneNumber(NumeroTelefone);
 
+  try
+    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+    HTTP.IOHandler := SSL;
+    HTTP.Request.ContentType := 'application/json';
+    HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+
+    JSONToSend := TJSONObject.Create;
     try
-      SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
-      HTTP.IOHandler := SSL;
-      HTTP.Request.ContentType := 'application/json';
-      HTTP.Request.CustomHeaders.AddValue('apikey', FChaveApi);
+      JSONToSend.AddPair('number', NumeroFormatado);
 
-      JSONToSend := TJSONObject.Create;
-      try
-        JSONToSend.AddPair('number', NumeroFormatado);
-
+      if FVersion = TVersionOption.V1 then
+      begin
         OptionsJSON := TJSONObject.Create;
         OptionsJSON.AddPair('delay', TJSONNumber.Create(1200));
         OptionsJSON.AddPair('presence', 'composing');
         JSONToSend.AddPair('options', OptionsJSON);
-
-        // Adiciona o array de contatos
         JSONToSend.AddPair('contactMessage', Contatos);
+        EndPoint := FEvolutionApiURL + '/message/sendContact/' + FNomeInstancia;
+      end
+      else if FVersion = TVersionOption.V2 then
+      begin
+        JSONToSend.AddPair('contact', Contatos);
+        EndPoint := FEvolutionApiURL + '/message/sendContact/' + FNomeInstancia;
+      end;
 
-        PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+      PostDataStream := TStringStream.Create(JSONToSend.ToString, TEncoding.UTF8);
+      try
+        Response := HTTP.Post(EndPoint, PostDataStream);
+
+        ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
         try
-          Response := HTTP.Post(FEvolutionApiURL + '/message/sendContact/' + FNomeInstancia, PostDataStream);
-
-          ResponseJSON := TJSONObject.ParseJSONValue(Response) as TJSONObject;
-          try
-            if Assigned(ResponseJSON) and ResponseJSON.TryGetValue('key', KeyJSON) then
-              Result := KeyJSON.GetValue<string>('id');
-          finally
-            ResponseJSON.Free;
-          end;
+          if Assigned(ResponseJSON) and ResponseJSON.TryGetValue('key', KeyJSON) then
+            Result := KeyJSON.GetValue<string>('id');
         finally
-          PostDataStream.Free;
+          ResponseJSON.Free;
         end;
       finally
-        JSONToSend.Free;
+        PostDataStream.Free;
       end;
     finally
-      SSL.Free;
-      HTTP.Free;
+      JSONToSend.Free;
     end;
+  finally
+    SSL.Free;
+    HTTP.Free;
   end;
 end;
+
 
 
 function TApiEuAtendo.ChamarFluxoTypebot(RemoteJid, TypebotName: string; Variaveis: TArray<TPair<string, string>>; StartSession: Boolean): string;
