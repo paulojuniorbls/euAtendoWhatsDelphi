@@ -91,7 +91,6 @@ object Form9: TForm9
     Height = 23
     PasswordChar = '*'
     TabOrder = 1
-    Text = 'B1E77E3C8E6C-4C8A-A7BA-31F37FBEC33B'
     OnExit = edtSenhaExit
   end
   object edtNumeroContato: TEdit
@@ -226,7 +225,7 @@ object Form9: TForm9
       Caption = 'Instancia'
       object Label3: TLabel
         Left = 311
-        Top = 123
+        Top = 182
         Width = 141
         Height = 30
         Caption = 'Status da instancia (Closed,Open,Connecting)'
@@ -234,7 +233,7 @@ object Form9: TForm9
       end
       object Label12: TLabel
         Left = 311
-        Top = 191
+        Top = 250
         Width = 71
         Height = 15
         Caption = 'Qtd Contatos'
@@ -305,7 +304,7 @@ object Form9: TForm9
       end
       object edtStatus: TEdit
         Left = 311
-        Top = 159
+        Top = 218
         Width = 282
         Height = 23
         ReadOnly = True
@@ -315,7 +314,7 @@ object Form9: TForm9
       end
       object edtQtdContatos: TEdit
         Left = 311
-        Top = 208
+        Top = 267
         Width = 282
         Height = 23
         ReadOnly = True
@@ -331,6 +330,24 @@ object Form9: TForm9
         Caption = 'Obter etiquetas(WhatsBusiness) V2'
         TabOrder = 9
         OnClick = btnObterEtiquetasClick
+      end
+      object Button27: TButton
+        Left = 311
+        Top = 116
+        Width = 282
+        Height = 25
+        Caption = 'Desconectar todas as instancias'
+        TabOrder = 10
+        OnClick = Button27Click
+      end
+      object Button28: TButton
+        Left = 311
+        Top = 151
+        Width = 282
+        Height = 25
+        Caption = 'Excluir instancias sem conex'#227'o'
+        TabOrder = 11
+        OnClick = Button28Click
       end
     end
     object TabSheet2: TTabSheet
@@ -401,6 +418,7 @@ object Form9: TForm9
         Width = 278
         Height = 23
         TabOrder = 5
+        OnChange = edtIDMensagemChange
       end
       object memoMensagemEnviar: TMemo
         Left = 315

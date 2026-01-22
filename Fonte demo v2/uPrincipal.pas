@@ -99,6 +99,8 @@ type
     Label17: TLabel;
     Button23: TButton;
     btnContato: TButton;
+    Button27: TButton;
+    Button28: TButton;
     procedure Button1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure ApiEuAtendo1ObterQrCode(Sender: TObject;
@@ -157,12 +159,28 @@ type
     procedure btnRemoveEtiquetaClick(Sender: TObject);
     procedure btAudioGravadoClick(Sender: TObject);
     procedure btnContatoClick(Sender: TObject);
+    procedure Button27Click(Sender: TObject);
+    procedure Button28Click(Sender: TObject);
+    procedure edtIDMensagemChange(Sender: TObject);
   private
+    type
+    TDevTraceLevel = (dtError, dtSuccess, dtWarn, dtInfo);
+    function DevTraceEndpointByLevel(ALevel: TDevTraceLevel): string;
+    procedure DevTraceLog(ALevel: TDevTraceLevel; const AMessage, ASource, ADetails: string);
+
     procedure ApplyBestFit(Grid: TDBGrid);
     function SaveImageFromURLToDisk(const ImageURL, NumeroContato
       : string): string;
     function FileToBase64(const FileName: string): string;
     function CleanInvalidBase64Chars(const Base64Str: string): string;
+    // DevTrace
+    function CreateUTF8Stream(const S: string): TStream;
+    function JsonEscape(const S: string): string;
+    function BuildDevTraceErrorJson(const AMessage, ASource, AAppVersion, AAppName,
+      AClientName, AClientTradeName, AClientCNPJ, AClientCode, AMetadataUserId,
+      AStackTrace: string): string;
+    // DevTrace
+
   public
     { Public declarations }
   end;
@@ -174,6 +192,145 @@ implementation
 
 {$R *.dfm}
 
+
+const
+  // Ajuste para o seu produto
+  DEVTRACE_APP_NAME = 'Demo Evo4Delphi';
+  DEVTRACE_APP_VERSION = '2.0.0';
+
+  // Coloque sua chave aqui (ou carregue de config/ini)
+  DEVTRACE_API_KEY = '4685ce1d-0e9f-463f-8f77-c0241f650807-df799f8f-5de2-45b7-aa9d-87943e38b7a3';
+  DEVTRACE_BASEURL = 'https://usiddnyapxfuqtiohkmk.supabase.co/functions/v1/log-ingest';
+
+
+function TForm9.DevTraceEndpointByLevel(ALevel: TDevTraceLevel): string;
+begin
+  case ALevel of
+    dtError:   Result := '/error';
+    dtSuccess: Result := '/success';
+    dtWarn:    Result := '/warn';
+    dtInfo:    Result := '/info';
+  else
+    Result := '/info';
+  end;
+end;
+
+procedure TForm9.DevTraceLog(ALevel: TDevTraceLevel; const AMessage, ASource, ADetails: string);
+var
+  HTTP: TIdHTTP;
+  SSL: TIdSSLIOHandlerSocketOpenSSL;
+  Body: TStream;
+  URL: string;
+  Json: string;
+
+  ClientName, ClientTrade, ClientCNPJ, ClientCode, UserId: string;
+begin
+  // Ajuste conforme seu contexto (empresa/usuário logado no ERP etc.)
+  ClientName  := '';
+  ClientTrade := '';
+  ClientCNPJ  := '';
+  ClientCode  := '';
+  UserId      := GetEnvironmentVariable('USERNAME');
+
+  URL := DEVTRACE_BASEURL + DevTraceEndpointByLevel(ALevel);
+
+  HTTP := TIdHTTP.Create(nil);
+  SSL  := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  Body := nil;
+  try
+    // TLS compatível (evita erro SSL em ambientes legados)
+    SSL.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+    HTTP.IOHandler := SSL;
+
+    HTTP.ConnectTimeout := 15000;
+    HTTP.ReadTimeout := 15000;
+
+    HTTP.Request.CustomHeaders.Clear;
+    HTTP.Request.CustomHeaders.Values['x-api-key'] := DEVTRACE_API_KEY;
+
+    HTTP.Request.CharSet := 'utf-8';
+    HTTP.Request.ContentType := 'application/json; charset=utf-8';
+    HTTP.Request.Accept := 'application/json';
+    HTTP.Request.UserAgent := 'DevTrace-Delphi';
+
+    // Reuso do seu builder atual:
+    // message/source/app_version/app_name/client_*/metadata/stack_trace
+    // Aqui, "stack_trace" vira "detalhes" (contexto) para todos os níveis.
+    Json := BuildDevTraceErrorJson(
+      AMessage,
+      ASource,
+      DEVTRACE_APP_VERSION,
+      DEVTRACE_APP_NAME,
+      ClientName,
+      ClientTrade,
+      ClientCNPJ,
+      ClientCode,
+      UserId,
+      ADetails
+    );
+
+    Body := CreateUTF8Stream(Json);
+
+    try
+      HTTP.Post(URL, Body);
+    except
+      // Logger nunca deve derrubar o app.
+      // Se quiser: salvar fallback em arquivo local (SentNumbers.txt style) ou EventLog.
+    end;
+
+  finally
+    Body.Free;
+    SSL.Free;
+    HTTP.Free;
+  end;
+end;
+
+
+function TForm9.CreateUTF8Stream(const S: string): TStream;
+var
+  Bytes: TBytes;
+begin
+  Bytes := TEncoding.UTF8.GetBytes(S);
+  Result := TMemoryStream.Create;
+  if Length(Bytes) > 0 then
+    Result.WriteBuffer(Bytes[0], Length(Bytes));
+  Result.Position := 0;
+end;
+
+function TForm9.JsonEscape(const S: string): string;
+begin
+  Result := StringReplace(S, '\', '\\', [rfReplaceAll]);
+  Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
+  Result := StringReplace(Result, #13, '\r', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #9,  '\t', [rfReplaceAll]);
+end;
+
+function TForm9.BuildDevTraceErrorJson(const AMessage, ASource, AAppVersion, AAppName,
+  AClientName, AClientTradeName, AClientCNPJ, AClientCode, AMetadataUserId,
+  AStackTrace: string): string;
+var
+  LMeta: string;
+begin
+  if Trim(AMetadataUserId) <> '' then
+    LMeta := Format('{"user_id":"%s"}', [JsonEscape(AMetadataUserId)])
+  else
+    LMeta := '{}';
+
+  Result :=
+    '{' +
+      '"message":"' + JsonEscape(AMessage) + '",' +
+      '"source":"' + JsonEscape(ASource) + '",' +
+      '"app_version":"' + JsonEscape(AAppVersion) + '",' +
+      '"app_name":"' + JsonEscape(AAppName) + '",' +
+      '"client_name":"' + JsonEscape(AClientName) + '",' +
+      '"client_trade_name":"' + JsonEscape(AClientTradeName) + '",' +
+      '"client_cnpj":"' + JsonEscape(AClientCNPJ) + '",' +
+      '"client_code":"' + JsonEscape(AClientCode) + '",' +
+      '"metadata":' + LMeta + ',' +
+      '"stack_trace":"' + JsonEscape(AStackTrace) + '"' +
+    '}';
+end;
 
 procedure TForm9.ApiEuAtendo1CriarInstancia(Sender: TObject;
   const InstanceResponse: TInstanceResponse);
@@ -371,6 +528,12 @@ begin
     end
     else
     begin
+      DevTraceLog(dtSuccess,
+        'Instância criada com sucesso.',
+        'uPrincipal.Button1Click',
+        'NomeInstancia=' + edtNome.Text + ' | URL=' + edtUrl.Text
+      );
+
       ShowMessage('Instância criada com sucesso.');
       ApiEuAtendo1.StatusInstancia;
       ApiEuAtendo1.ObterQrCode;
@@ -378,6 +541,9 @@ begin
   except
     on E: Exception do
     begin
+
+
+
       ShowMessage('Erro inesperado: ' + E.Message);
     end;
   end;
@@ -645,6 +811,11 @@ begin
   Button7.Enabled := False;
   Button14.Enabled := False;
   Button19.Enabled := False;
+
+
+
+
+
 end;
 
 function TForm9.CleanInvalidBase64Chars(const Base64Str: string): string;
@@ -666,8 +837,7 @@ end;
 
 procedure TForm9.Button3Click(Sender: TObject);
 begin
-  edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto
-    (edtNumeroContato.Text, memoMensagemEnviar.Lines.Text);
+  edtIDMensagem.Text := ApiEuAtendo1.EnviarMensagemDeTexto(edtNumeroContato.Text, memoMensagemEnviar.Lines.Text);
 end;
 
 procedure TForm9.Button4Click(Sender: TObject);
@@ -862,9 +1032,18 @@ begin
   ApiEuAtendo1.GlobalAPI := edtApiGlobal.Text;
 end;
 
+procedure TForm9.edtIDMensagemChange(Sender: TObject);
+begin
+ DevTraceLog(dtSuccess,
+        'mensagem enviada com sucesso.',
+        'uPrincipal.edtIDMensagemChange',
+        'NomeInstancia=' + edtNome.Text + ' | URL=' + edtUrl.Text
+      );
+end;
+
 procedure TForm9.edtNomeExit(Sender: TObject);
 begin
-  edtNome.Text := TRegEx.Replace(edtNome.Text, '[^a-zA-Z0-9]', '');
+//  edtNome.Text := TRegEx.Replace(edtNome.Text, '[^a-zA-Z0-9]', '');
   ApiEuAtendo1.NomeInstancia := edtNome.Text;
 end;
 
@@ -1027,6 +1206,63 @@ begin
 
 end;
 
+
+procedure TForm9.Button27Click(Sender: TObject);
+begin
+    ClientDataSet1.First;
+
+   while not ClientDataSet1.Eof do
+     begin
+       if Assigned(ClientDataSet1.FindField('instancename')) then
+        edtNome.Text := ClientDataSet1.FieldByName('instancename').AsString;
+
+      if Assigned(ClientDataSet1.FindField('apikey')) then
+        edtSenha.Text := ClientDataSet1.FieldByName('apikey').AsString;
+
+      if Assigned(ClientDataSet1.FindField('id')) then
+        edtIdGrupo.Text := ClientDataSet1.FieldByName('id').AsString;
+
+        ApiEuAtendo1.NomeInstancia := edtNome.Text;
+        ApiEuAtendo1.ChaveApi      := edtSenha.Text;
+
+        ApiEuAtendo1.DeslogarInstancia;
+        ApiEuAtendo1.StatusInstancia;
+
+        ClientDataSet1.Next;
+
+     end;
+
+end;
+
+procedure TForm9.Button28Click(Sender: TObject);
+begin
+    ClientDataSet1.First;
+
+   while not ClientDataSet1.Eof do
+     begin
+       if Assigned(ClientDataSet1.FindField('instancename')) then
+        edtNome.Text := ClientDataSet1.FieldByName('instancename').AsString;
+
+      if Assigned(ClientDataSet1.FindField('apikey')) then
+        edtSenha.Text := ClientDataSet1.FieldByName('apikey').AsString;
+
+      if Assigned(ClientDataSet1.FindField('id')) then
+        edtIdGrupo.Text := ClientDataSet1.FieldByName('id').AsString;
+
+        ApiEuAtendo1.NomeInstancia := edtNome.Text;
+        ApiEuAtendo1.ChaveApi      := edtSenha.Text;
+
+        ApiEuAtendo1.StatusInstancia;
+
+        if edtStatus.Text <> 'open' then
+            ApiEuAtendo1.DeletarInstancia(edtNome.Text)
+            else
+            showmessage('Essa não pode');
+
+        ClientDataSet1.Next;
+
+     end;
+end;
 
 procedure TForm9.Button20Click(Sender: TObject);
 var
